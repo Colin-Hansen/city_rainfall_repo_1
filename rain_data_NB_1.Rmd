@@ -37,28 +37,50 @@ panderOptions('knitr.auto.asis', FALSE)
 
 
 
-```{r p-match function, include=FALSE}
+```{r compile raw data, include=FALSE}
 
 
 # create (if necessary) 'data_out' directory
 if(dir.exists('data_out') == FALSE) dir.create('data_out')
 
 
-# >>>>> p_match_Function <<<<<<<<<<<<<
+  # read the site names
+  site_names<-read.table('Site Names/Site_Names_and_Ground_Elevations.csv',sep=",",header=TRUE,stringsAsFactors = FALSE)
+ 
+  # extract a vector of the site names
+  site_names<-as.character(site_names$Site.Name)
+  
+  # shorten to first two 2 site names - testing / optional
+  site_names <- site_names[1:2]
 
-  # function to search subdirectories for matching files
-  p_match_Function <- function(files,name) {
+  # get the names of the raw data subfolders
+  subfolder_names<-dir('data_in',full.names = TRUE)
+ 
+  # shorten to first two years of data - testing / optional
+  subfolder_names <- subfolder_names[1:2]
+  
+  
+  ## ## ## Start of nested loop ## ## ##
+  
+  
+  # enter loop along the subfolder names (e.g. 1988, 1989, etc.)
+  for (i in seq_along(subfolder_names)) {
+  
+  # enter loop along the site names (e.g. 'S01', 'S02', etc.)  
+  for (j in seq_along(site_names)) {
 
+  name<-site_names[j]
+  
   # strip the site names from the raw file names in each subfolder
   
-  temp_names<-strtrim(dir(files),3)
+  temp_names<-strtrim(dir(subfolder_names[i]),3)
  
   # check to see if the 'name' passed to the function exists in the trimmed file names
   if(name %in% temp_names)  {
     
  
   # the name of the matched file
-  file_match_char<-list.files(files,pattern = name)
+  file_match_char<-list.files(subfolder_names[i],pattern = name)
   #print(file_match_char)
   
   # the following 2 lines of code are not used here ( **BUT KEEP FOR NOW - the FILE APPEND MAY BE NEEDED ELSEWHERE **)
@@ -66,7 +88,7 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
   #  if(file.exists(outfile_1) == FALSE) write_csv(file_match,outfile_1) else write_csv(file_match,outfile_1,append = TRUE)
   
   # the full path pf the matched file
-  file_match_path<-file.path(files,file_match_char)
+  file_match_path<-file.path(subfolder_names[i],file_match_char)
   #print(file_match_path)
   
    # reference the full path and the input file name using file.path
@@ -99,6 +121,15 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
   temp_df<-cbind(Site.Name,rainfall_data,Year,Month,Day,Hour,Minute,DOY)
   #  print(head(temp_df))
   
+  # create empty list
+  raw_data_list<-list(NULL)
+  
+  # build a list of the raw data for each site (see Hadley book, page 319)
+  raw_data_list[[j]] <- temp_df
+  
+  
+  
+  
   # create a directory to save the .CSV files
   CSV_master_folder_5_min<-paste0('data_out',"/MASTER_CSV_5_min")
  
@@ -125,41 +156,26 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
     
     print ("No filename match in that subfolder")
   }  
-  
-  
-  }  # Close of p_match_Function
+    
+     
+    } # end of 'seq_along(site_names)'
 
-  # pre-work before calling the
-  
-  
-  # read the site names
-  site_names<-read.table('Site Names/Site_Names_and_Ground_Elevations.csv',sep=",",header=TRUE,stringsAsFactors = FALSE)
-  
-  # extract a vector of the site names
-  site_names<-as.character(site_names$Site.Name)
-  
+  } # end of 'seq_along(subfolder_names)'
 
-  # get the names of the raw data subfolders
-  subfolder_names<-dir('data_in',full.names = TRUE)
-  subfolder_names<-as.list(subfolder_names)
-  # 
-  # # specify which years of raw data to read
-  first<-1
-  last<-2 # do not use 26 ** that folder has Calgary International data
-  
-   subfolder_names_temp<-subfolder_names[first:last]
-  
-  #for (i in seq_along(site_names_2)) {
 
-  for (i in 1:1) {
-
-     name<-site_names[i]
-     lapply(subfolder_names_temp, p_match_Function, name)
-
-}
 
 # *************************************************************
 
+   # old approach - commented out
+#     
+#   for (i in seq_along(site_names_2)) {
+# 
+#      name<-site_names[i]
+#      lapply(subfolder_names_temp, p_match_Function, name)
+# 
+# }
+   
+   
 
 
 ```
