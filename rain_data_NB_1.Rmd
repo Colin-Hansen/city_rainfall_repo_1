@@ -198,11 +198,11 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
                                                  Q3=quantile(Rainfall,probs=0.75),
                                                  max=max(Rainfall),
                                                  CV_pct=(sd/mean)*100,
-                                                 count=n(),
-                                                 n.valid=n(!is.na()),
-                                                 pct.valid=(n.valid/count)*100)
+                                                 total.count=n(),
+                                                 n.valid=sum(!is.na(Rainfall)),
+                                                 pct.valid=(n.valid/total.count)*100)
       
-      print(stats_5_min)
+      # print(stats_5_min)
       
       
       ## OLD: using 'summarytools' package
@@ -218,15 +218,28 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
      
       
       
-      
-      
       # create a file name to save the files for each site
       CSV_file_name<-paste0(site_prefix,"_stats_summary.csv")
       CSV_outfile<-file.path(stats_folder_1, CSV_file_name)
       
+      # transpose the results before writing .CSV file
+      stats_5_min <- t(stats_5_min )
+      
+      # convert from matrix to dataframe; add column names
+      stats_5_min <- as.data.frame(stats_5_min)
+      # colnames(stats_5_min) <- c("Statistic","Value")
+      
+      
+      # print(class(stats_5_min))
+      
+      print(dim(stats_5_min))
+      
+      
       # write the results to .CSV file
-      # write.table(stats_summary,CSV_outfile,sep=",",col.names=TRUE,row.names=TRUE)
-       write.table(stats_5_min,CSV_outfile,sep=",",col.names=TRUE,row.names=TRUE)
+      # write.csv(stats_5_min,CSV_outfile,sep=",",col.names=TRUE,row.names = FALSE)
+       write.csv(stats_5_min,CSV_outfile,sep=",",col.names=TRUE,row.names = TRUE)
+     
+       
       
       #write_excel_csv(stats_summary)
       
