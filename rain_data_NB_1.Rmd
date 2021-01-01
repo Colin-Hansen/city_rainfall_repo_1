@@ -16,19 +16,14 @@ When you save the notebook, an HTML file containing the code and output will be 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(printr)
-# library(ggplot2)
 library(reshape2)
 library(pander)
 
 
 # added 12-DEC-2020
-# library(dplyr)
-# library(tidyr)
-# library(purrr)
 library(lubridate)
 library(scales)
 library(rio)
-# library(readr)
 library(knitr)
 library(tinytex)
 library(tidyverse)
@@ -190,21 +185,37 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
       # read the rainfall data for one site using 'read_csv'
       rainfall_data<-read_csv(CSV_infile,col_names = TRUE)
       
+      # 5-minute statistics
+      
+      ## STOPPED HERE 01-JAN-2021
+      
+      stats_5_min <- rainfall_data %>% summarize(mean=mean(Rainfall),
+                                                 sd=sd(Rainfall),
+                                                 mean=mean(Rainfall),
+                                                 min=min(Rainfall),
+                                                 Q1=quantile(Rainfall,probs=0.25),
+                                                 median=median(Rainfall),
+                                                 Q3=quantile(Rainfall,probs=0.75),
+                                                 max=max(Rainfall),
+                                                 CV_pct=(sd/mean)*100,
+                                                 count=n(),
+                                                 n.valid=n(!is.na()),
+                                                 pct.valid=(n.valid/count)*100)
+      
+      print(stats_5_min)
+      
+      
+      ## OLD: using 'summarytools' package
+      
       # set global options for summarytools package
-      summarytools::st_options(round.digits = 3)
+      # summarytools::st_options(round.digits = 3)
       
       # use descr from 'summarytools' package
-      stats_summary <- summarytools::descr(rainfall_data$Rainfall,round.digits = st_options("round.digits"),na.rm = TRUE)
+      # stats_summary <- summarytools::descr(rainfall_data$Rainfall,round.digits = st_options("round.digits"),na.rm = TRUE)
       
-      
-      # stats_summary <- as.data.frame(stats_summary)
-      
-      # convert to tibble; Note: keep row names using 'NA' option
-      # stats_summary <- as.tibble(stats_summary,rownames = NA)
-      
-      # colnames(stats_summary) <- c("Statistic","Value")
-      
-      #print(stats_summary) 
+      # convert summarytools objects to tibble; transpose the result
+      # stats_summary <- t(tb(stats_summary,drop.var.col = FALSE))
+     
       
       
       
@@ -214,7 +225,8 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
       CSV_outfile<-file.path(stats_folder_1, CSV_file_name)
       
       # write the results to .CSV file
-      write.table(stats_summary,CSV_outfile,sep=",",col.names=TRUE,row.names=TRUE)
+      # write.table(stats_summary,CSV_outfile,sep=",",col.names=TRUE,row.names=TRUE)
+       write.table(stats_5_min,CSV_outfile,sep=",",col.names=TRUE,row.names=TRUE)
       
       #write_excel_csv(stats_summary)
       
