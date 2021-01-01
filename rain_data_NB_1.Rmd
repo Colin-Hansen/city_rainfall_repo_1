@@ -16,21 +16,22 @@ When you save the notebook, an HTML file containing the code and output will be 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(printr)
-library(ggplot2)
+# library(ggplot2)
 library(reshape2)
 library(pander)
 
 
 # added 12-DEC-2020
-library(dplyr)
-library(tidyr)
-library(purrr)
+# library(dplyr)
+# library(tidyr)
+# library(purrr)
 library(lubridate)
 library(scales)
 library(rio)
-library(readr)
+# library(readr)
 library(knitr)
 library(tinytex)
+library(tidyverse)
 
 # EDA packages
 library(summarytools)
@@ -167,21 +168,17 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
 
 ```{r summary statistics,include=FALSE}
 
-  # get vector of 5-minute raw data filenames - WITH PATH
-  raw_path_filename<-dir('data_out/MASTER_CSV_5_min',full.names = TRUE)
 
-  # vector of 5-minute raw data filenames - WITHOUT PATH
-  raw_filename<-dir('data_out/MASTER_CSV_5_min')
+  # function to return basic summary stastics (note: requires 'summary tools' package)
 
-
-   # enter loop along the raw file names  
-    for (i in seq_along(raw_path_filename)) {
-
-      # read the rainfall data for one site using 'read_csv'
-      rainfall_data<-read_csv(raw_path_filename[i],col_names = TRUE)
-     
+  rain_stats_function_1 <- function(files) {
+    
+      # specify the CSV directory location and path to read the CSV file
+      CSV_folder<-'data_out/MASTER_CSV_5_min'
+      CSV_infile<-file.path(CSV_folder, files)
+      
       # create site name prefix
-      site_prefix<-strtrim(raw_filename[i],3)
+      site_prefix<-strtrim(files,3)
       print(site_prefix)
       
       # create directory to save statistics results
@@ -190,9 +187,8 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
       # create (if necessary) directory - ** first part
       if(dir.exists(stats_folder_1) == FALSE) dir.create(stats_folder_1)
       
-      
-      
-      
+      # read the rainfall data for one site using 'read_csv'
+      rainfall_data<-read_csv(CSV_infile,col_names = TRUE)
       
       # set global options for summarytools package
       summarytools::st_options(round.digits = 3)
@@ -200,14 +196,87 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
       # use descr from 'summarytools' package
       stats_summary <- summarytools::descr(rainfall_data$Rainfall,round.digits = st_options("round.digits"),na.rm = TRUE)
       
-      # print(stats_summary)
+      
+      # stats_summary <- as.data.frame(stats_summary)
+      
+      # convert to tibble; Note: keep row names using 'NA' option
+      # stats_summary <- as.tibble(stats_summary,rownames = NA)
+      
+      # colnames(stats_summary) <- c("Statistic","Value")
+      
+      #print(stats_summary) 
+      
+      
+      
       
       # create a file name to save the files for each site
       CSV_file_name<-paste0(site_prefix,"_stats_summary.csv")
       CSV_outfile<-file.path(stats_folder_1, CSV_file_name)
       
       # write the results to .CSV file
-      write.table(stats_summary,CSV_outfile,sep=",",col.names=TRUE,row.names=TRUE) 
+      write.table(stats_summary,CSV_outfile,sep=",",col.names=TRUE,row.names=TRUE)
+      
+      #write_excel_csv(stats_summary)
+      
+      
+    
+  }
+
+
+  # >>>>>>>  FUNCTION CALL <<<<<<<<<<<<
+  
+   # the names of the full CSV files
+   csv_names<-list.files('data_out/MASTER_CSV_5_min')
+   
+   lapply(csv_names, function(x) rain_stats_function_1(x))
+   
+   rm(csv_names)
+  
+  # *************************************************************
+
+
+
+  # # get vector of 5-minute raw data filenames - WITH PATH
+  # raw_path_filename<-dir('data_out/MASTER_CSV_5_min',full.names = TRUE)
+  # 
+  # # vector of 5-minute raw data filenames - WITHOUT PATH
+  # raw_filename<-dir('data_out/MASTER_CSV_5_min')
+  # 
+  # 
+  #  # enter loop along the raw file names  
+  #   for (i in seq_along(raw_path_filename)) {
+  # 
+  #     # read the rainfall data for one site using 'read_csv'
+  #     rainfall_data<-read_csv(raw_path_filename[i],col_names = TRUE)
+  #    
+  #     # create site name prefix
+  #     site_prefix<-strtrim(raw_filename[i],3)
+  #     print(site_prefix)
+  #     
+  #     # create directory to save statistics results
+  #     stats_folder_1<-'data_out/Statistics_1'
+  #     
+  #     # create (if necessary) directory - ** first part
+  #     if(dir.exists(stats_folder_1) == FALSE) dir.create(stats_folder_1)
+  #     
+  #     
+  #     
+  #     
+  #     
+  #     # set global options for summarytools package
+  #     summarytools::st_options(round.digits = 3)
+  #     
+  #     # use descr from 'summarytools' package
+  #     stats_summary <- summarytools::descr(rainfall_data$Rainfall,round.digits = st_options("round.digits"),na.rm = TRUE)
+  #     
+  #     # print(stats_summary)
+  #     
+  #     # create a file name to save the files for each site
+  #     CSV_file_name<-paste0(site_prefix,"_stats_summary.csv")
+  #     CSV_outfile<-file.path(stats_folder_1, CSV_file_name)
+  #     
+  #     # write the results to .CSV file
+  #     write.table(stats_summary,CSV_outfile,sep=",",col.names=TRUE,row.names=TRUE) 
 
      
      
@@ -219,15 +288,9 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
       # build a list of the 'stats_summary' results 
       # raw_data_list[[i]] <- temp_df
       
-      
-  
     
     
-  }
-
-
-
-
+  # }
 
 
 
