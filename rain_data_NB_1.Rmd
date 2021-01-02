@@ -28,9 +28,6 @@ library(knitr)
 library(tinytex)
 library(tidyverse)
 
-# EDA packages
-library(summarytools)
-
 panderOptions('knitr.auto.asis', FALSE)
 ```
 
@@ -191,7 +188,6 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
       
       stats_5_min <- rainfall_data %>% summarize(mean=mean(Rainfall),
                                                  sd=sd(Rainfall),
-                                                 mean=mean(Rainfall),
                                                  min=min(Rainfall),
                                                  Q1=quantile(Rainfall,probs=0.25),
                                                  median=median(Rainfall),
@@ -204,20 +200,6 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
       
       # print(stats_5_min)
       
-      
-      ## OLD: using 'summarytools' package
-      
-      # set global options for summarytools package
-      # summarytools::st_options(round.digits = 3)
-      
-      # use descr from 'summarytools' package
-      # stats_summary <- summarytools::descr(rainfall_data$Rainfall,round.digits = st_options("round.digits"),na.rm = TRUE)
-      
-      # convert summarytools objects to tibble; transpose the result
-      # stats_summary <- t(tb(stats_summary,drop.var.col = FALSE))
-     
-      
-      
       # create a file name to save the files for each site
       CSV_file_name<-paste0(site_prefix,"_stats_summary.csv")
       CSV_outfile<-file.path(stats_folder_1, CSV_file_name)
@@ -227,22 +209,75 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
       
       # convert from matrix to dataframe; add column names
       stats_5_min <- as.data.frame(stats_5_min)
-      # colnames(stats_5_min) <- c("Statistic","Value")
+      
+     # function to return basic statistics; Note: just pass the Rainfall data to the function
+      
+      basic_stats_function <- function(df) {
+        
+        summarize(mean=mean(df),
+                  sd=sd(df),
+                  min=min(df),
+                  Q1=quantile(df,probs=0.25),
+                  median=median(df),
+                  Q3=quantile(df,probs=0.75),
+                  max=max(df),
+                  CV_pct=(sd/mean)*100,
+                  total.count=n(),
+                  n.valid=sum(!is.na(df)),
+                  pct.valid=(n.valid/total.count)*100)
+        
+      }
+      
+       # function to return basic statistics; Note: just pass the Rainfall data to the function
+      
+      TEST_stats_function <- function(df) {
+        
+        mean=mean(df)
+                 
+      }
       
       
-      # print(class(stats_5_min))
+    
+        
+     # get the houry rainfall; Note: you have to add 'ungroup()' before the select command to extract only the hourly.rainfall *** 
+        
+      hourly_rainfall <- rainfall_data %>% group_by(Year,Month,Day,Hour) %>% summarize(hourly.rainfall=sum(Rainfall)) %>% ungroup() %>% select(hourly.rainfall)
       
-      print(dim(stats_5_min))
+      
+      # print(class(hourly_rainfall))
+      
+      # print(hourly_rainfall)
+      # 
+      # print(str(hourly_rainfall))
+      
+      # test_hourly_stats <- basic_stats_function(hourly_rainfall)
+      
+      ## testing area *** 
+      
+      # dummy data
+      
+      # dummy_data <- as.data.frame(1:5)
+       dummy_data <- 1:5
+      
+      print(dummy_data)
+
+      str(dummy_data)
+      
+      test_mean <- TEST_stats_function(dummy_data)
+      
+      sprintf("the mean is %f",test_mean)
       
       
+     
       # write the results to .CSV file
       # write.csv(stats_5_min,CSV_outfile,sep=",",col.names=TRUE,row.names = FALSE)
        write.csv(stats_5_min,CSV_outfile,sep=",",col.names=TRUE,row.names = TRUE)
+       
+      # write.csv(test_hourly_stats,CSV_outfile,sep=",",col.names=TRUE,row.names = TRUE)
      
        
       
-      #write_excel_csv(stats_summary)
-      
+    
       
     
   }
