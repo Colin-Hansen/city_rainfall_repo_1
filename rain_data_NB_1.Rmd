@@ -27,6 +27,7 @@ library(rio)
 library(knitr)
 library(tinytex)
 library(tidyverse)
+library(summarytools)
 
 panderOptions('knitr.auto.asis', FALSE)
 ```
@@ -92,7 +93,7 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
   rainfall_data<-read_tsv(infile,col_names = FALSE,trim_ws = TRUE,skip = 3)
   
   colnames(rainfall_data)<-c("Date","Hour.Minute.Seconds","Rainfall")
-  print(str(rainfall_data))
+  # print(str(rainfall_data))
  
   # create a column of Site.Name data
   Site.Name<-rep(name,nrow(rainfall_data))
@@ -147,7 +148,6 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
   write_csv(raw_data_XX,CSV_outfile)   
   
   rm(raw_data_XX)  
-  rm(rainfall_data)
   
      
   } # end of 'seq_along(site_names)'
@@ -161,7 +161,7 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
 ```{r summary statistics,include=FALSE}
 
 
-  # function to return basic summary stastics (note: requires 'summary tools' package)
+  # function to return basic summary stastics
 
   rain_stats_function_1 <- function(files) {
     
@@ -180,13 +180,11 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
       if(dir.exists(stats_folder_1) == FALSE) dir.create(stats_folder_1)
       
       # read the rainfall data for one site using 'read_csv'
-      rainfall_data<-read_csv(CSV_infile,col_names = TRUE)
+      rain_5_min<-read_csv(CSV_infile,col_names = TRUE)
       
-      # 5-minute statistics
+      # 5 minute rainfall statistics
       
-      ## STOPPED HERE 01-JAN-2021
-      
-      stats_5_min <- rainfall_data %>% summarize(mean=mean(Rainfall),
+      stats_5_min <- rain_5_min %>% summarize(mean=mean(Rainfall),
                                                  sd=sd(Rainfall),
                                                  min=min(Rainfall),
                                                  Q1=quantile(Rainfall,probs=0.25),
@@ -198,89 +196,71 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
                                                  n.valid=sum(!is.na(Rainfall)),
                                                  pct.valid=(n.valid/total.count)*100)
       
-      # print(stats_5_min)
+      print(stats_5_min)
       
-      # create a file name to save the files for each site
-      CSV_file_name<-paste0(site_prefix,"_stats_summary.csv")
-      CSV_outfile<-file.path(stats_folder_1, CSV_file_name)
-      
-      # transpose the results before writing .CSV file
-      stats_5_min <- t(stats_5_min )
-      
-      # convert from matrix to dataframe; add column names
-      stats_5_min <- as.data.frame(stats_5_min)
-      
-     # function to return basic statistics; Note: just pass the Rainfall data to the function
-      
-      basic_stats_function <- function(df) {
+     
+      # get the hourly rainfall
+      # Note: you have to add 'ungroup()' before the select command to extract only the hourly.rainfall *** 
         
-        summarize(mean=mean(df),
-                  sd=sd(df),
-                  min=min(df),
-                  Q1=quantile(df,probs=0.25),
-                  median=median(df),
-                  Q3=quantile(df,probs=0.75),
-                  max=max(df),
-                  CV_pct=(sd/mean)*100,
-                  total.count=n(),
-                  n.valid=sum(!is.na(df)),
-                  pct.valid=(n.valid/total.count)*100)
-        
-      }
+      rain_hourly <- rain_5_min %>% group_by(Year,Month,Day,Hour) %>% summarize(summary.rainfall=sum(Rainfall)) %>% ungroup() %>% select(summary.rainfall)
       
-       # function to return basic statistics; Note: just pass the Rainfall data to the function
+      # get the daily rainfall
       
-      TEST_stats_function <- function(df) {
-        
-        mean=mean(df)
-                 
-      }
+      rain_daily <- rain_5_min %>% group_by(Year,Month,Day) %>% summarize(summary.rainfall=sum(Rainfall)) %>% ungroup() %>% select(summary.rainfall)
       
+       # get the monthly rainfall
       
-    
-        
-     # get the houry rainfall; Note: you have to add 'ungroup()' before the select command to extract only the hourly.rainfall *** 
-        
-      hourly_rainfall <- rainfall_data %>% group_by(Year,Month,Day,Hour) %>% summarize(hourly.rainfall=sum(Rainfall)) %>% ungroup() %>% select(hourly.rainfall)
+      rain_monthly <- rain_5_min %>% group_by(Year,Month) %>% summarize(summary.rainfall=sum(Rainfall)) %>% ungroup() %>% select(summary.rainfall)
       
+       # get the yearly rainfall
       
-      # print(class(hourly_rainfall))
+      rain_yearly <- rain_5_min %>% group_by(Year) %>% summarize(summary.rainfall=sum(Rainfall)) %>% ungroup() %>% select(summary.rainfall)
       
-      # print(hourly_rainfall)
-      # 
-      # print(str(hourly_rainfall))
+      # create a list of the rain interval results
       
-      # test_hourly_stats <- basic_stats_function(hourly_rainfall)
+      rain_list_1 <- list(rain_hourly,rain_daily,rain_monthly,rain_yearly)
+   
+      # enter loop along the rain list
+       for (k in seq_along(rain_list_1)) {
+   
+      # use descr from 'summarytools' package
+         
+      # set global options for summarytools package
+      summarytools::st_options(round.digits = 3)
       
-      ## testing area *** 
-      
-      # dummy data
-      
-      # dummy_data <- as.data.frame(1:5)
-       dummy_data <- 1:5
-      
-      print(dummy_data)
+      # note - double square brackets to access individual element of the list
+      stats_summary <- descr(rain_list_1[[k]]$summary.rainfall,na.rm = TRUE)
 
-      str(dummy_data)
+      # convert 'descr' output to tibble
+      stats_summary <- tb(stats_summary)
       
-      test_mean <- TEST_stats_function(dummy_data)
+      # transpose the tibble
+      stats_summary <- t(stats_summary)
       
-      sprintf("the mean is %f",test_mean)
+      # print(stats_summary)
       
+      # create empty dataframe, on first pass; populate the df with results
+      if(k == 1) {
+        new_stats_df<-data.frame(NULL)
+        new_stats_df <- stats_summary
+      }
       
-     
-      # write the results to .CSV file
-      # write.csv(stats_5_min,CSV_outfile,sep=",",col.names=TRUE,row.names = FALSE)
-       write.csv(stats_5_min,CSV_outfile,sep=",",col.names=TRUE,row.names = TRUE)
-       
-      # write.csv(test_hourly_stats,CSV_outfile,sep=",",col.names=TRUE,row.names = TRUE)
-     
-       
-      
+      # iteratively cbind the results into a dataframe
+      new_stats_df <- cbind(new_stats_df,stats_summary)
     
-      
+    } # end of seq_along 'rain_list_1'
     
-  }
+    # create a file name to save the files for each site
+    CSV_file_name<-paste0(site_prefix,"_stats_summary_MASTER.csv")
+    CSV_outfile<-file.path(stats_folder_1, CSV_file_name)
+      
+     # write the results to .CSV file
+    write.table(new_stats_df,CSV_outfile,sep=",",col.names=TRUE,row.names=TRUE)
+    
+    rm(new_stats_df)
+      
+   
+  } # end of rain_stats_function_1
 
 
   # >>>>>>>  FUNCTION CALL <<<<<<<<<<<<
@@ -294,67 +274,7 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
   
   # *************************************************************
 
+   
 
-
-  # # get vector of 5-minute raw data filenames - WITH PATH
-  # raw_path_filename<-dir('data_out/MASTER_CSV_5_min',full.names = TRUE)
-  # 
-  # # vector of 5-minute raw data filenames - WITHOUT PATH
-  # raw_filename<-dir('data_out/MASTER_CSV_5_min')
-  # 
-  # 
-  #  # enter loop along the raw file names  
-  #   for (i in seq_along(raw_path_filename)) {
-  # 
-  #     # read the rainfall data for one site using 'read_csv'
-  #     rainfall_data<-read_csv(raw_path_filename[i],col_names = TRUE)
-  #    
-  #     # create site name prefix
-  #     site_prefix<-strtrim(raw_filename[i],3)
-  #     print(site_prefix)
-  #     
-  #     # create directory to save statistics results
-  #     stats_folder_1<-'data_out/Statistics_1'
-  #     
-  #     # create (if necessary) directory - ** first part
-  #     if(dir.exists(stats_folder_1) == FALSE) dir.create(stats_folder_1)
-  #     
-  #     
-  #     
-  #     
-  #     
-  #     # set global options for summarytools package
-  #     summarytools::st_options(round.digits = 3)
-  #     
-  #     # use descr from 'summarytools' package
-  #     stats_summary <- summarytools::descr(rainfall_data$Rainfall,round.digits = st_options("round.digits"),na.rm = TRUE)
-  #     
-  #     # print(stats_summary)
-  #     
-  #     # create a file name to save the files for each site
-  #     CSV_file_name<-paste0(site_prefix,"_stats_summary.csv")
-  #     CSV_outfile<-file.path(stats_folder_1, CSV_file_name)
-  #     
-  #     # write the results to .CSV file
-  #     write.table(stats_summary,CSV_outfile,sep=",",col.names=TRUE,row.names=TRUE) 
-
-     
-     
-      
-  
-      # create empty list, on first pass
-      # if(i == 1) raw_data_list<-list(NULL)
-      
-      # build a list of the 'stats_summary' results 
-      # raw_data_list[[i]] <- temp_df
-      
-    
-    
-  # }
-
-
-
-
-
-```
+``` # end of code chunk
 
