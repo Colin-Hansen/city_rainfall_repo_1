@@ -184,21 +184,34 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
       
       # 5 minute rainfall statistics
       
-      stats_5_min <- rain_5_min %>% summarize(mean=mean(Rainfall),
-                                                 sd=sd(Rainfall),
-                                                 min=min(Rainfall),
-                                                 Q1=quantile(Rainfall,probs=0.25),
-                                                 median=median(Rainfall),
-                                                 Q3=quantile(Rainfall,probs=0.75),
-                                                 max=max(Rainfall),
-                                                 CV_pct=(sd/mean)*100,
-                                                 total.count=n(),
-                                                 n.valid=sum(!is.na(Rainfall)),
-                                                 pct.valid=(n.valid/total.count)*100)
+      # stats_5_min <- rain_5_min %>% summarize(mean=mean(Rainfall),
+      #                                            sd=sd(Rainfall),
+      #                                            min=min(Rainfall),
+      #                                            Q1=quantile(Rainfall,probs=0.25),
+      #                                            median=median(Rainfall),
+      #                                            Q3=quantile(Rainfall,probs=0.75),
+      #                                            max=max(Rainfall),
+      #                                            CV_pct=(sd/mean)*100,
+      #                                            total.count=n(),
+      #                                            n.valid=sum(!is.na(Rainfall)),
+      #                                            pct.valid=(n.valid/total.count)*100)
+      # 
+      # print(stats_5_min)
       
-      print(stats_5_min)
+      # use descr from 'summarytools' package
+         
+      # set global options for summarytools package
+      summarytools::st_options(round.digits = 3)
       
-     
+      # stats for only the 'rain_5_min' data
+      stats_summary_5_min <- descr(rain_5_min$Rainfall,na.rm = TRUE)
+      
+      # convert 'descr' output to tibble
+      stats_summary_5_min <- tb(stats_summary_5_min)
+      
+      # transpose the tibble
+      stats_summary_5_min <- t(stats_summary_5_min)
+      
       # get the hourly rainfall
       # Note: you have to add 'ungroup()' before the select command to extract only the hourly.rainfall *** 
         
@@ -224,10 +237,7 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
        for (k in seq_along(rain_list_1)) {
    
       # use descr from 'summarytools' package
-         
-      # set global options for summarytools package
-      summarytools::st_options(round.digits = 3)
-      
+     
       # note - double square brackets to access individual element of the list
       stats_summary <- descr(rain_list_1[[k]]$summary.rainfall,na.rm = TRUE)
 
@@ -241,23 +251,35 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
       
       # create empty dataframe, on first pass; populate the df with results
       if(k == 1) {
-        new_stats_df<-data.frame(NULL)
-        new_stats_df <- stats_summary
+        stats_df<-data.frame(NULL)
+        stats_df <- stats_summary
       }
       
       # iteratively cbind the results into a dataframe
-      new_stats_df <- cbind(new_stats_df,stats_summary)
+      stats_df <- cbind(stats_df,stats_summary)
     
     } # end of seq_along 'rain_list_1'
+      
+      print(dim(stats_df))
+      
+      
+      # add column names
+      
+      colnames(stats_df) <- c("Statistic","Hourly","Daily", "Monthly", "Yearly")
+      
+      # cbind the 'stats_summary_5_min' results into the dataframe
+      stats_df <- cbind(stats_df,"5 Minute" = stats_summary_5_min)
+      
+      
     
     # create a file name to save the files for each site
     CSV_file_name<-paste0(site_prefix,"_stats_summary_MASTER.csv")
     CSV_outfile<-file.path(stats_folder_1, CSV_file_name)
       
      # write the results to .CSV file
-    write.table(new_stats_df,CSV_outfile,sep=",",col.names=TRUE,row.names=TRUE)
+    write.table(stats_df,CSV_outfile,sep=",",col.names=TRUE,row.names=TRUE)
     
-    rm(new_stats_df)
+    rm(stats_df)
       
    
   } # end of rain_stats_function_1
@@ -275,6 +297,5 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
   # *************************************************************
 
    
-
-``` # end of code chunk
+``` 
 
