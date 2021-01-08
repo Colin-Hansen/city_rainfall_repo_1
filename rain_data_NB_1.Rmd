@@ -182,7 +182,7 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
       # read the rainfall data for one site using 'read_csv'
       rain_5_min<-read_csv(CSV_infile,col_names = TRUE)
       
-      # 5 minute rainfall statistics
+      # 5 minute rainfall statistics - ** not used but keep for now **
       
       # stats_5_min <- rain_5_min %>% summarize(mean=mean(Rainfall),
       #                                            sd=sd(Rainfall),
@@ -233,6 +233,10 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
       
       rain_list_1 <- list(rain_hourly,rain_daily,rain_monthly,rain_yearly)
    
+      # create empty dataframe to store the results
+      
+      stats_df<-data.frame(NULL)
+
       # enter loop along the rain list
        for (k in seq_along(rain_list_1)) {
    
@@ -249,37 +253,39 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
       
       # print(stats_summary)
       
-      # create empty dataframe, on first pass; populate the df with results
+      # assign stats result to the dataataframe, only on the first pass
       if(k == 1) {
-        stats_df<-data.frame(NULL)
         stats_df <- stats_summary
       }
       
-      # iteratively cbind the results into a dataframe
-      stats_df <- cbind(stats_df,stats_summary)
-    
+      # iteratively cbind the results into a dataframe, starting at the second interation
+      if(k > 1) {
+        stats_df <- cbind(stats_df,stats_summary)
+      }
+      
     } # end of seq_along 'rain_list_1'
+      
+      # cbind the 'stats_summary_5_min' results into the dataframe
+      stats_df <- cbind(stats_summary_5_min,stats_df)
       
       print(dim(stats_df))
       
+      print(class(stats_df))
       
-      # add column names
-      
-      colnames(stats_df) <- c("Statistic","Hourly","Daily", "Monthly", "Yearly")
-      
-      # cbind the 'stats_summary_5_min' results into the dataframe
-      stats_df <- cbind(stats_df,"5 Minute" = stats_summary_5_min)
-      
-      
+      print(stats_df[1,])
     
-    # create a file name to save the files for each site
-    CSV_file_name<-paste0(site_prefix,"_stats_summary_MASTER.csv")
-    CSV_outfile<-file.path(stats_folder_1, CSV_file_name)
       
-     # write the results to .CSV file
-    write.table(stats_df,CSV_outfile,sep=",",col.names=TRUE,row.names=TRUE)
-    
-    rm(stats_df)
+      # replace the default first row entries (e.g. 'value') with proper column names
+      stats_df[1,1:5] <- c("5 Minute","Hourly","Daily","Monthly","Yearly")
+      
+      # create a file name to save the files for each site
+      CSV_file_name<-paste0(site_prefix,"_stats_summary_MASTER.csv")
+      CSV_outfile<-file.path(stats_folder_1, CSV_file_name)
+        
+       # write the results to .CSV file; note: col.names = false to prevent getting 'V1', 'V2' etc. as column names
+      write.table(stats_df,CSV_outfile,sep=",",col.names=FALSE,row.names=TRUE)
+       
+      rm(stats_df)
       
    
   } # end of rain_stats_function_1
