@@ -229,15 +229,43 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
       
       rain_yearly <- rain_5_min %>% group_by(Year) %>% summarize(summary.rainfall=sum(Rainfall)) %>% ungroup() %>% select(summary.rainfall)
       
+      
+      
+      
+      # get the 5- minute rainfall - WITHOUT ZEROES
+      
+      rain_5_min_NZ <- rain_5_min %>% filter(Rainfall > 0) %>% ungroup() %>% select(Rainfall)
+     
+      # get the hourly rainfall - WITHOUT ZEROES
+      
+      rain_hourly_NZ <- rain_hourly %>% filter(Rainfall > 0) %>% ungroup() %>% select(Rainfall)
+      
+      # get the daily rainfall - WITHOUT ZEROES
+      
+      rain_daily_NZ <- rain_daily %>% filter(Rainfall > 0) %>% ungroup() %>% select(Rainfall)
+      
+      # get the monthly rainfall - WITHOUT ZEROES
+      
+      rain_monthly_NZ <- rain_monthly %>% filter(Rainfall > 0) %>% ungroup() %>% select(Rainfall)
+      
+      # get the yearly rainfall - WITHOUT ZEROES
+      
+      rain_yearly_NZ <- rain_yearly %>% filter(Rainfall > 0) %>% ungroup() %>% select(Rainfall)
+      
+      
+      ## STOPPED HERE 9-JAN-2021
+      
+      
+      
       # create a list of the rain interval results
       
       rain_list_1 <- list(rain_hourly,rain_daily,rain_monthly,rain_yearly)
    
       # create empty dataframe to store the results
-      
       stats_df<-data.frame(NULL)
 
       # enter loop along the rain list
+      
        for (k in seq_along(rain_list_1)) {
    
       # use descr from 'summarytools' package
@@ -258,7 +286,7 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
         stats_df <- stats_summary
       }
       
-      # iteratively cbind the results into a dataframe, starting at the second interation
+      # iteratively cbind the results into a dataframe, starting at the second iteration
       if(k > 1) {
         stats_df <- cbind(stats_df,stats_summary)
       }
@@ -267,13 +295,6 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
       
       # cbind the 'stats_summary_5_min' results into the dataframe
       stats_df <- cbind(stats_summary_5_min,stats_df)
-      
-      print(dim(stats_df))
-      
-      print(class(stats_df))
-      
-      print(stats_df[1,])
-    
       
       # replace the default first row entries (e.g. 'value') with proper column names
       stats_df[1,1:5] <- c("5 Minute","Hourly","Daily","Monthly","Yearly")
@@ -286,7 +307,16 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
       write.table(stats_df,CSV_outfile,sep=",",col.names=FALSE,row.names=TRUE)
        
       rm(stats_df)
+   
       
+      
+      
+      
+      
+      
+      
+      
+         
    
   } # end of rain_stats_function_1
 
