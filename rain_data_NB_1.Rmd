@@ -1,5 +1,5 @@
 ---
-title: "City of Calgary Rainfall Data Notebook"
+title: "City of Calgary Rainfall Data Results"
 output:
   html_notebook: default
   html_document:
@@ -158,7 +158,7 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
 
 ```
 
-```{r summary statistics,include=FALSE}
+```{r summary statistics,echo= FALSE,include=FALSE}
 
 
   # function to return basic summary stastics
@@ -198,6 +198,48 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
       # 
       # print(stats_5_min)
       
+      # get basic stats on the 5 minute rainfall data
+      
+      mean <- mean(rain_5_min$Rainfall,na.rm = TRUE)
+      
+      sd <- sd(rain_5_min$Rainfall,na.rm = TRUE)
+      
+      max <- max(rain_5_min$Rainfall,na.rm = TRUE)
+      
+      n.total <- nrow(rain_5_min)
+      
+      n.NA <- sum(is.na(rain_5_min$Rainfall))
+      
+      pct.missing <- (n.NA/n.total)*100
+      
+      n.non.zero <- nrow(subset(rain_5_min,Rainfall > 0))
+      
+      pct.non.zero <- (n.non.zero/n.total)*100
+      
+      n.May.to.Sept <- rain_5_min %>% filter(Month >= 5 & Month <= 9)
+      
+      n.May.to.Sept <- nrow(n.May.to.Sept)
+      
+      pct.May.to.Sept <- (n.May.to.Sept/n.total)*100
+      
+      # rbind the results
+      
+      stats_5_min <- rbind(mean,sd,max,n.total,n.NA,pct.missing,n.non.zero,pct.non.zero,n.May.to.Sept,pct.May.to.Sept)
+      
+      # print(dim(stats_5_min))
+      
+      colnames(stats_5_min) <- c("Value")
+      
+      # create a file name to save the 5 minute stats
+      CSV_file_name<-paste0(site_prefix,"_stats_summary_5_min.csv")
+      CSV_outfile<-file.path(stats_folder_1, CSV_file_name)
+        
+      # write the results to .CSV file; note: col.names = false to prevent getting 'V1', 'V2' etc. as column names
+      write.table(stats_5_min,CSV_outfile,sep=",",col.names=TRUE,row.names=TRUE)
+      
+      rm(stats_5_min) 
+      
+      
       # use descr from 'summarytools' package
          
       # set global options for summarytools package
@@ -212,54 +254,31 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
       # transpose the tibble
       stats_summary_5_min <- t(stats_summary_5_min)
       
-      # get the hourly rainfall
+      # get the 5 minute rainfall - WITHOUT RAINFALL EQUAL TO ZERO
+      rain_5_min_NZ <- rain_5_min %>% filter(Rainfall > 0) %>% mutate(summary.rainfall = Rainfall) %>% ungroup() %>% select(summary.rainfall)
+      
+     
+      
+      
+      # get the hourly rainfall - WITHOUT RAINFALL EQUAL TO ZERO
       # Note: you have to add 'ungroup()' before the select command to extract only the hourly.rainfall *** 
         
-      rain_hourly <- rain_5_min %>% group_by(Year,Month,Day,Hour) %>% summarize(summary.rainfall=sum(Rainfall)) %>% ungroup() %>% select(summary.rainfall)
+      # rain_hourly <- rain_5_min %>% group_by(Year,Month,Day,Hour) %>% summarize(summary.rainfall=sum(Rainfall)) %>% ungroup() %>% select(summary.rainfall)
+      rain_hourly_NZ <- rain_5_min %>% filter(Rainfall > 0) %>% group_by(Year,Month,Day,Hour) %>% summarize(summary.rainfall=sum(Rainfall)) %>% ungroup() %>% select(summary.rainfall)
       
-      # get the daily rainfall
+      # get the daily rainfall - WITHOUT RAINFALL EQUAL TO ZERO
+      rain_daily_NZ <- rain_5_min %>% filter(Rainfall > 0) %>% group_by(Year,Month,Day) %>% summarize(summary.rainfall=sum(Rainfall)) %>% ungroup() %>% select(summary.rainfall)
       
-      rain_daily <- rain_5_min %>% group_by(Year,Month,Day) %>% summarize(summary.rainfall=sum(Rainfall)) %>% ungroup() %>% select(summary.rainfall)
+       # get the monthly rainfall - WITHOUT RAINFALL EQUAL TO ZERO
+      rain_monthly_NZ <- rain_5_min %>% filter(Rainfall > 0) %>% group_by(Year,Month) %>% summarize(summary.rainfall=sum(Rainfall)) %>% ungroup() %>% select(summary.rainfall)
       
-       # get the monthly rainfall
-      
-      rain_monthly <- rain_5_min %>% group_by(Year,Month) %>% summarize(summary.rainfall=sum(Rainfall)) %>% ungroup() %>% select(summary.rainfall)
-      
-       # get the yearly rainfall
-      
-      rain_yearly <- rain_5_min %>% group_by(Year) %>% summarize(summary.rainfall=sum(Rainfall)) %>% ungroup() %>% select(summary.rainfall)
-      
-      
-      
-      
-      # get the 5- minute rainfall - WITHOUT ZEROES
-      
-      rain_5_min_NZ <- rain_5_min %>% filter(Rainfall > 0) %>% ungroup() %>% select(Rainfall)
-     
-      # get the hourly rainfall - WITHOUT ZEROES
-      
-      rain_hourly_NZ <- rain_hourly %>% filter(Rainfall > 0) %>% ungroup() %>% select(Rainfall)
-      
-      # get the daily rainfall - WITHOUT ZEROES
-      
-      rain_daily_NZ <- rain_daily %>% filter(Rainfall > 0) %>% ungroup() %>% select(Rainfall)
-      
-      # get the monthly rainfall - WITHOUT ZEROES
-      
-      rain_monthly_NZ <- rain_monthly %>% filter(Rainfall > 0) %>% ungroup() %>% select(Rainfall)
-      
-      # get the yearly rainfall - WITHOUT ZEROES
-      
-      rain_yearly_NZ <- rain_yearly %>% filter(Rainfall > 0) %>% ungroup() %>% select(Rainfall)
-      
-      
-      ## STOPPED HERE 9-JAN-2021
-      
+       # get the yearly rainfall - WITHOUT RAINFALL EQUAL TO ZERO
+      rain_yearly_NZ <- rain_5_min %>% filter(Rainfall > 0) %>% group_by(Year) %>% summarize(summary.rainfall=sum(Rainfall)) %>% ungroup() %>% select(summary.rainfall)
       
       
       # create a list of the rain interval results
       
-      rain_list_1 <- list(rain_hourly,rain_daily,rain_monthly,rain_yearly)
+      rain_list_1 <- list(rain_5_min_NZ,rain_hourly_NZ,rain_daily_NZ,rain_monthly_NZ,rain_yearly_NZ)
    
       # create empty dataframe to store the results
       stats_df<-data.frame(NULL)
@@ -297,7 +316,7 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
       stats_df <- cbind(stats_summary_5_min,stats_df)
       
       # replace the default first row entries (e.g. 'value') with proper column names
-      stats_df[1,1:5] <- c("5 Minute","Hourly","Daily","Monthly","Yearly")
+      stats_df[1,1:6] <- c("5 Minute","5 Minute.Non.Zero","Hourly.Non.Zero","Daily.Non.Zero","Monthly.Non.Zero","Yearly.Non.Zero")
       
       # create a file name to save the files for each site
       CSV_file_name<-paste0(site_prefix,"_stats_summary_MASTER.csv")
