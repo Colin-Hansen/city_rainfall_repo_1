@@ -1,10 +1,10 @@
 ---
 title: "City of Calgary Rainfall Data Results"
 output:
+  pdf_document: default
   html_notebook: default
   html_document:
     df_print: paged
-  pdf_document: default
   word_document: default
 ---
 
@@ -234,51 +234,61 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
       CSV_file_name<-paste0(site_prefix,"_stats_summary_5_min.csv")
       CSV_outfile<-file.path(stats_folder_1, CSV_file_name)
         
-      # write the results to .CSV file; note: col.names = false to prevent getting 'V1', 'V2' etc. as column names
-      write.table(stats_5_min,CSV_outfile,sep=",",col.names=TRUE,row.names=TRUE)
+      # write the results to .CSV file; ** Note: col.names = NA to ensure the column name is written over the data, not the rownames
+      
+      write.table(stats_5_min,CSV_outfile,sep=",",col.names=NA,row.names=TRUE)
+      
+      
+       # create table using kable
+      
+      # create dummy table caption
+      table_caption<-paste0(site_prefix,' Summmary: 5 Minute Data')
+    
+      # read the saved .CSV file
+      # stats_table<-read.table('data_out/S01/CSV/S01.csv',sep=",",header=TRUE,stringsAsFactors = FALSE)
+    
+      
+      stats_5_min %>% knitr::kable(caption = table_caption, digits = 2) %>% 
+        kableExtra::kable_styling(bootstrap_options = "striped")
+      
+      
+      
+      
       
       rm(stats_5_min) 
-      
       
       # use descr from 'summarytools' package
          
       # set global options for summarytools package
       summarytools::st_options(round.digits = 3)
       
-      # stats for only the 'rain_5_min' data
-      stats_summary_5_min <- descr(rain_5_min$Rainfall,na.rm = TRUE)
       
-      # convert 'descr' output to tibble
-      stats_summary_5_min <- tb(stats_summary_5_min)
-      
-      # transpose the tibble
-      stats_summary_5_min <- t(stats_summary_5_min)
-      
-      # get the 5 minute rainfall - WITHOUT RAINFALL EQUAL TO ZERO
-      rain_5_min_NZ <- rain_5_min %>% filter(Rainfall > 0) %>% mutate(summary.rainfall = Rainfall) %>% ungroup() %>% select(summary.rainfall)
-      
+      # filter for the May to September rainfall
+      rain_5_min <- rain_5_min %>% filter(Month >= 5 & Month <= 9)
      
-      
-      
-      # get the hourly rainfall - WITHOUT RAINFALL EQUAL TO ZERO
+      # get the hourly rainfall
       # Note: you have to add 'ungroup()' before the select command to extract only the hourly.rainfall *** 
-        
-      # rain_hourly <- rain_5_min %>% group_by(Year,Month,Day,Hour) %>% summarize(summary.rainfall=sum(Rainfall)) %>% ungroup() %>% select(summary.rainfall)
-      rain_hourly_NZ <- rain_5_min %>% filter(Rainfall > 0) %>% group_by(Year,Month,Day,Hour) %>% summarize(summary.rainfall=sum(Rainfall)) %>% ungroup() %>% select(summary.rainfall)
+     
+       rain_hourly <- rain_5_min %>% group_by(Year,Month,Day,Hour) %>% summarize(summary.rainfall=sum(Rainfall)) %>% ungroup() %>% select(summary.rainfall)
       
-      # get the daily rainfall - WITHOUT RAINFALL EQUAL TO ZERO
-      rain_daily_NZ <- rain_5_min %>% filter(Rainfall > 0) %>% group_by(Year,Month,Day) %>% summarize(summary.rainfall=sum(Rainfall)) %>% ungroup() %>% select(summary.rainfall)
+      # get the daily rainfall
+      rain_daily <- rain_5_min %>% group_by(Year,Month,Day) %>% summarize(summary.rainfall=sum(Rainfall)) %>% ungroup() %>% select(summary.rainfall)
       
-       # get the monthly rainfall - WITHOUT RAINFALL EQUAL TO ZERO
-      rain_monthly_NZ <- rain_5_min %>% filter(Rainfall > 0) %>% group_by(Year,Month) %>% summarize(summary.rainfall=sum(Rainfall)) %>% ungroup() %>% select(summary.rainfall)
+      # get the weekly rainfall
+      rain_weekly <- rain_5_min %>% group_by(Year,Month,Week) %>% summarize(summary.rainfall=sum(Rainfall)) %>% ungroup() %>% select(summary.rainfall)
       
-       # get the yearly rainfall - WITHOUT RAINFALL EQUAL TO ZERO
-      rain_yearly_NZ <- rain_5_min %>% filter(Rainfall > 0) %>% group_by(Year) %>% summarize(summary.rainfall=sum(Rainfall)) %>% ungroup() %>% select(summary.rainfall)
+       # get the monthly rainfall
+      rain_monthly <- rain_5_min %>% group_by(Year,Month) %>% summarize(summary.rainfall=sum(Rainfall)) %>% ungroup() %>% select(summary.rainfall)
+      
+       # get the yearly rainfall
+      rain_yearly<- rain_5_min %>% group_by(Year) %>% summarize(summary.rainfall=sum(Rainfall)) %>% ungroup() %>% select(summary.rainfall)
       
       
       # create a list of the rain interval results
       
-      rain_list_1 <- list(rain_5_min_NZ,rain_hourly_NZ,rain_daily_NZ,rain_monthly_NZ,rain_yearly_NZ)
+      # rain_list_1 <- list(rain_hourly_NZ,rain_daily_NZ,rain_weekly_NZ,rain_monthly_NZ,rain_yearly_NZ)
+      
+       rain_list_1 <- list(rain_hourly,rain_daily,rain_weekly,rain_monthly,rain_yearly)
    
       # create empty dataframe to store the results
       stats_df<-data.frame(NULL)
@@ -313,13 +323,13 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
     } # end of seq_along 'rain_list_1'
       
       # cbind the 'stats_summary_5_min' results into the dataframe
-      stats_df <- cbind(stats_summary_5_min,stats_df)
+      # stats_df <- cbind(stats_summary_5_min,stats_df)
       
       # replace the default first row entries (e.g. 'value') with proper column names
-      stats_df[1,1:6] <- c("5 Minute","5 Minute.Non.Zero","Hourly.Non.Zero","Daily.Non.Zero","Monthly.Non.Zero","Yearly.Non.Zero")
+      stats_df[1,1:5] <- c("Hourly","Daily","Weekly","Monthly","Yearly")
       
       # create a file name to save the files for each site
-      CSV_file_name<-paste0(site_prefix,"_stats_summary_MASTER.csv")
+      CSV_file_name<-paste0(site_prefix,"_stats_summary_hourly_to_yearly.csv")
       CSV_outfile<-file.path(stats_folder_1, CSV_file_name)
         
        # write the results to .CSV file; note: col.names = false to prevent getting 'V1', 'V2' etc. as column names
@@ -330,12 +340,6 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
       
       
       
-      
-      
-      
-      
-      
-         
    
   } # end of rain_stats_function_1
 
@@ -353,4 +357,23 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
 
    
 ``` 
+
+
+```{r, results='asis'}
+
+  # create table using kable
+  
+  # create dummy table caption
+  table_caption<-paste0('SXX',': Statistics Summmary')
+
+  # read the saved .CSV file
+  stats_table<-read.table('data_out/Statistics_1/S01_stats_summary_5_min.csv',sep=",",header=TRUE,stringsAsFactors = FALSE)
+
+  
+  stats_table %>% knitr::kable(caption = table_caption, digits = 2) %>% 
+    kableExtra::kable_styling(bootstrap_options = "striped")
+  
+  ```
+
+
 
