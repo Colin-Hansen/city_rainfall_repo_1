@@ -28,13 +28,14 @@ library(knitr)
 library(tinytex)
 library(tidyverse)
 library(summarytools)
+library(ggnewscale)
 
 panderOptions('knitr.auto.asis', FALSE)
 ```
 
 
 
-```{r compile raw data, include=FALSE}
+```{r compile raw data, eval = FALSE, include=FALSE}
 
 
 # create (if necessary) 'data_out' directory
@@ -173,11 +174,18 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
       site_prefix<-strtrim(files,3)
       print(site_prefix)
       
-      # create directory to save statistics results
-      stats_folder_1<-'data_out/Statistics_1'
+      # create directory to save statistics results - 5 minute data
+      stats_folder_1<-'data_out/Stats_Summary_1'
       
       # create (if necessary) directory - ** first part
       if(dir.exists(stats_folder_1) == FALSE) dir.create(stats_folder_1)
+      
+      # create directory to save statistics results - hourly / daily / weekly / monthly / yearly data
+      stats_folder_2<-'data_out/Stats_Summary_2'
+      
+      # create (if necessary) directory - ** first part
+      if(dir.exists(stats_folder_2) == FALSE) dir.create(stats_folder_2)
+      
       
       # read the rainfall data for one site using 'read_csv'
       rain_5_min<-read_csv(CSV_infile,col_names = TRUE)
@@ -330,15 +338,13 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
       
       # create a file name to save the files for each site
       CSV_file_name<-paste0(site_prefix,"_stats_summary_hourly_to_yearly.csv")
-      CSV_outfile<-file.path(stats_folder_1, CSV_file_name)
+      CSV_outfile<-file.path(stats_folder_2, CSV_file_name)
         
        # write the results to .CSV file; note: col.names = false to prevent getting 'V1', 'V2' etc. as column names
       write.table(stats_df,CSV_outfile,sep=",",col.names=FALSE,row.names=TRUE)
        
       rm(stats_df)
    
-      
-      
       
    
   } # end of rain_stats_function_1
@@ -359,7 +365,23 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
 ``` 
 
 
-```{r, results='asis'}
+```{r, extract events MIT_1,echo=FALSE,}
+
+
+
+
+
+
+
+
+```
+
+
+
+
+
+
+```{r, kable testing,results='asis'}
 
   # create table using kable
   
@@ -367,13 +389,13 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
   table_caption<-paste0('SXX',': Statistics Summmary')
 
   # read the saved .CSV file
-  stats_table<-read.table('data_out/Statistics_1/S01_stats_summary_5_min.csv',sep=",",header=TRUE,stringsAsFactors = FALSE)
+  # stats_table<-read.table('data_out/Stats_Summary_1/S01_stats_summary_5_min.csv',sep=",",header=TRUE,stringsAsFactors = FALSE)
 
   
-  stats_table %>% knitr::kable(caption = table_caption, digits = 2) %>% 
+  # stats_table %>% knitr::kable(caption = table_caption, digits = 2) %>% 
     kableExtra::kable_styling(bootstrap_options = "striped")
   
   ```
-
-
+  
+  
 
