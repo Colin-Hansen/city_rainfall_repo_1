@@ -14,7 +14,8 @@ When you save the notebook, an HTML file containing the code and output will be 
 
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = FALSE)
+
 library(printr)
 library(reshape2)
 library(pander)
@@ -29,6 +30,7 @@ library(tinytex)
 library(tidyverse)
 library(summarytools)
 library(ggnewscale)
+library(kableExtra)
 
 panderOptions('knitr.auto.asis', FALSE)
 ```
@@ -159,7 +161,7 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
 
 ```
 
-```{r summary statistics,echo= FALSE,include=FALSE}
+```{r summary statistics, echo = FALSE}
 
 
   # function to return basic summary stastics
@@ -234,9 +236,14 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
       
       stats_5_min <- rbind(mean,sd,max,n.total,n.NA,pct.missing,n.non.zero,pct.non.zero,n.May.to.Sept,pct.May.to.Sept)
       
-      # print(dim(stats_5_min))
+        
+      # add a new field 'Site.Name'
       
-      colnames(stats_5_min) <- c("Value")
+      Site.Name <- rep(site_prefix,nrow(stats_5_min))
+      
+      stats_5_min<-cbind(Site.Name,stats_5_min)
+     
+      colnames(stats_5_min) <- c("Site Name","Value")
       
       # create a file name to save the 5 minute stats
       CSV_file_name<-paste0(site_prefix,"_stats_summary_5_min.csv")
@@ -245,27 +252,11 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
       # write the results to .CSV file; ** Note: col.names = NA to ensure the column name is written over the data, not the rownames
       
       write.table(stats_5_min,CSV_outfile,sep=",",col.names=NA,row.names=TRUE)
-      
-      
-       # create table using kable
-      
-      # create dummy table caption
-      table_caption<-paste0(site_prefix,' Summmary: 5 Minute Data')
-    
-      # read the saved .CSV file
-      # stats_table<-read.table('data_out/S01/CSV/S01.csv',sep=",",header=TRUE,stringsAsFactors = FALSE)
-    
-      
-      stats_5_min %>% knitr::kable(caption = table_caption, digits = 2) %>% 
-        kableExtra::kable_styling(bootstrap_options = "striped")
-      
-      
-      
-      
-      
+     
       rm(stats_5_min) 
       
-      # use descr from 'summarytools' package
+     
+       # use descr from 'summarytools' package
          
       # set global options for summarytools package
       summarytools::st_options(round.digits = 3)
@@ -316,9 +307,17 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
       # transpose the tibble
       stats_summary <- t(stats_summary)
       
+      
+      # add a new field 'Site.Name'
+      
+      Site.Name <- rep(site_prefix,nrow(stats_summary))
+      
+      stats_summary<-cbind(Site.Name,stats_summary)
+      
+      
       # print(stats_summary)
       
-      # assign stats result to the dataataframe, only on the first pass
+      # assign stats result to the dataframe, only on the first pass
       if(k == 1) {
         stats_df <- stats_summary
       }
@@ -334,14 +333,16 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
       # stats_df <- cbind(stats_summary_5_min,stats_df)
       
       # replace the default first row entries (e.g. 'value') with proper column names
-      stats_df[1,1:5] <- c("Hourly","Daily","Weekly","Monthly","Yearly")
+      stats_df[1,1:6] <- c("Site.Name","Hourly","Daily","Weekly","Monthly","Yearly")
+      
       
       # create a file name to save the files for each site
       CSV_file_name<-paste0(site_prefix,"_stats_summary_hourly_to_yearly.csv")
       CSV_outfile<-file.path(stats_folder_2, CSV_file_name)
         
        # write the results to .CSV file; note: col.names = false to prevent getting 'V1', 'V2' etc. as column names
-      write.table(stats_df,CSV_outfile,sep=",",col.names=FALSE,row.names=TRUE)
+      # write.table(stats_df,CSV_outfile,sep=",",col.names=FALSE,row.names=TRUE)
+      write.table(stats_df,CSV_outfile,sep=",",col.names=NA,row.names=TRUE)
        
       rm(stats_df)
    
@@ -362,15 +363,38 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
   # *************************************************************
 
    
+   
+  # create table using kable
+  
+  # create dummy table caption
+  table_caption<-paste0('SXX',': Statistics Summmary')
+
+  # read the saved .CSV file
+  stats_table<-read.table('data_out/Stats_Summary_1/S01_stats_summary_5_min.csv',sep=",",header=TRUE,stringsAsFactors = FALSE)
+
+  
+  stats_table %>% knitr::kable(caption = table_caption, digits = 2) %>% kableExtra::kable_styling(bootstrap_options = "striped")
+
+   
+   
+   
+   
 ``` 
 
 
-```{r, extract events MIT_1,echo=FALSE,}
+```{r kable testing 1,eval = FALSE, results='asis'}
 
 
+  # create table using kable
+  
+  # create dummy table caption
+  table_caption<-paste0('SXX',': Statistics Summmary')
 
+  # read the saved .CSV file
+  stats_table<-read.table('data_out/Stats_Summary_1/S01_stats_summary_5_min.csv',sep=",",header=TRUE,stringsAsFactors = FALSE)
 
-
+  
+  stats_table %>% knitr::kable(caption = table_caption, digits = 2) %>% kableExtra::kable_styling(bootstrap_options = "striped")
 
 
 
@@ -379,23 +403,14 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
 
 
 
+```{r extract events MIT_1}
 
 
-```{r, kable testing,results='asis'}
 
-  # create table using kable
-  
-  # create dummy table caption
-  table_caption<-paste0('SXX',': Statistics Summmary')
+```
 
-  # read the saved .CSV file
-  # stats_table<-read.table('data_out/Stats_Summary_1/S01_stats_summary_5_min.csv',sep=",",header=TRUE,stringsAsFactors = FALSE)
 
-  
-  # stats_table %>% knitr::kable(caption = table_caption, digits = 2) %>% 
-    kableExtra::kable_styling(bootstrap_options = "striped")
-  
-  ```
-  
+
+
   
 
