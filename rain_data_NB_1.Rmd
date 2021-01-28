@@ -8,11 +8,6 @@ output:
   word_document: default
 ---
 
-Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Ctrl+Alt+I*.
-
-When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Ctrl+Shift+K* to preview the HTML file).
-
-
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE)
 
@@ -28,9 +23,10 @@ library(rio)
 library(knitr)
 library(tinytex)
 library(tidyverse)
-library(summarytools)
 library(ggnewscale)
 library(kableExtra)
+library(hydroTSM)
+#library(plyr)
 
 panderOptions('knitr.auto.asis', FALSE)
 ```
@@ -255,13 +251,6 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
      
       rm(stats_5_min) 
       
-     
-       # use descr from 'summarytools' package
-         
-      # set global options for summarytools package
-      summarytools::st_options(round.digits = 3)
-      
-      
       # filter for the May to September rainfall
       rain_5_min <- rain_5_min %>% filter(Month >= 5 & Month <= 9)
      
@@ -269,6 +258,8 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
       # Note: you have to add 'ungroup()' before the select command to extract only the hourly.rainfall *** 
      
        rain_hourly <- rain_5_min %>% group_by(Year,Month,Day,Hour) %>% summarize(summary.rainfall=sum(Rainfall)) %>% ungroup() %>% select(summary.rainfall)
+       
+       # print(rain_hourly)
       
       # get the daily rainfall
       rain_daily <- rain_5_min %>% group_by(Year,Month,Day) %>% summarize(summary.rainfall=sum(Rainfall)) %>% ungroup() %>% select(summary.rainfall)
@@ -288,66 +279,56 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
       # rain_list_1 <- list(rain_hourly_NZ,rain_daily_NZ,rain_weekly_NZ,rain_monthly_NZ,rain_yearly_NZ)
       
        rain_list_1 <- list(rain_hourly,rain_daily,rain_weekly,rain_monthly,rain_yearly)
-   
+       
       # create empty dataframe to store the results
       stats_df<-data.frame(NULL)
 
       # enter loop along the rain list
       
        for (k in seq_along(rain_list_1)) {
+         
+      # print(attributes(rain_list_1[[k]]))
    
-      # use descr from 'summarytools' package
+      # use smry from 'hydroTSM' package
      
       # note - double square brackets to access individual element of the list
-      stats_summary <- descr(rain_list_1[[k]]$summary.rainfall,na.rm = TRUE)
-
-      # convert 'descr' output to tibble
-      stats_summary <- tb(stats_summary)
+      stats_summary_hydroTSM <- hydroTSM:::smry(rain_list_1[[k]]$summary.rainfall,na.rm = TRUE)
       
-      # transpose the tibble
-      stats_summary <- t(stats_summary)
+      # print(stats_summary_hydroTSM)
       
-      
-      # add a new field 'Site.Name'
-      
-      Site.Name <- rep(site_prefix,nrow(stats_summary))
-      
-      stats_summary<-cbind(Site.Name,stats_summary)
-      
-      
-      # print(stats_summary)
-      
-      # assign stats result to the dataframe, only on the first pass
+       # assign stats result to the dataframe, only on the first pass
       if(k == 1) {
-        stats_df <- stats_summary
+        stats_df <- stats_summary_hydroTSM
       }
       
       # iteratively cbind the results into a dataframe, starting at the second iteration
       if(k > 1) {
-        stats_df <- cbind(stats_df,stats_summary)
+        stats_df <- cbind(stats_df,stats_summary_hydroTSM)
       }
       
+ 
     } # end of seq_along 'rain_list_1'
-      
-      # cbind the 'stats_summary_5_min' results into the dataframe
-      # stats_df <- cbind(stats_summary_5_min,stats_df)
-      
-      # replace the default first row entries (e.g. 'value') with proper column names
-      stats_df[1,1:6] <- c("Site.Name","Hourly","Daily","Weekly","Monthly","Yearly")
+    
+      # add column names
+      colnames(stats_df) <- c("Hourly","Daily","Weekly","Monthly","Yearly")
       
       
-      # create a file name to save the files for each site
+      # add Site.Name to dataframe
+      
+      Site.Name <- rep(site_prefix,nrow(stats_df))
+      
+      stats_df<- data.frame(Site.Name,stats_df)
+      
+       # create a file name to save the files for each site
       CSV_file_name<-paste0(site_prefix,"_stats_summary_hourly_to_yearly.csv")
       CSV_outfile<-file.path(stats_folder_2, CSV_file_name)
         
-       # write the results to .CSV file; note: col.names = false to prevent getting 'V1', 'V2' etc. as column names
-      # write.table(stats_df,CSV_outfile,sep=",",col.names=FALSE,row.names=TRUE)
-      write.table(stats_df,CSV_outfile,sep=",",col.names=NA,row.names=TRUE)
+       # write the results to .CSV file
+       write.table(stats_df,CSV_outfile,sep=",",col.names=NA,row.names=TRUE)
        
       rm(stats_df)
-   
       
-   
+      
   } # end of rain_stats_function_1
 
 
@@ -382,7 +363,7 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
 ``` 
 
 
-```{r kable testing 1,eval = FALSE, results='asis'}
+```{r kable testing 1, eval = FALSE, results='asis'}
 
 
   # create table using kable
