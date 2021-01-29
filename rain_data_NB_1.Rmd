@@ -160,16 +160,24 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
 ```{r summary statistics, echo = FALSE}
 
 
-  # function to return basic summary stastics
+  # seq along the .CSV files; generate basic summary stastics
 
-  rain_stats_function_1 <- function(files) {
+    # the names of the full CSV files
+    csv_names<-list.files('data_out/MASTER_CSV_5_min')
     
-      # specify the CSV directory location and path to read the CSV file
+    # print(csv_names)
+    
+     for (i in seq_along(csv_names)) {
+   
+      print(csv_names[i])
+    
+       # specify the CSV directory location and path to read the CSV file
       CSV_folder<-'data_out/MASTER_CSV_5_min'
-      CSV_infile<-file.path(CSV_folder, files)
+      CSV_infile<-file.path(CSV_folder, csv_names[i])
+      
       
       # create site name prefix
-      site_prefix<-strtrim(files,3)
+      site_prefix<-strtrim(csv_names[i],3)
       print(site_prefix)
       
       # create directory to save statistics results - 5 minute data
@@ -239,7 +247,7 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
       
       stats_5_min<-cbind(Site.Name,stats_5_min)
      
-      colnames(stats_5_min) <- c("Site Name","Value")
+      colnames(stats_5_min) <- c("Site.Name","Value")
       
       # create a file name to save the 5 minute stats
       CSV_file_name<-paste0(site_prefix,"_stats_summary_5_min.csv")
@@ -249,7 +257,53 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
       
       write.table(stats_5_min,CSV_outfile,sep=",",col.names=NA,row.names=TRUE)
      
-      rm(stats_5_min) 
+      # combine the Site.Name and the total data count
+      
+      temp_count_df <- data.frame("Site.Name" = site_prefix,"Data.Count" = n.total)
+      
+      print(temp_count_df)
+      
+      # # assign 'stats_5_min' data count result to the dataframe, only on the first pass
+      if(i == 1) {
+         
+      # # create empty dataframe to store the results
+      count_df<-data.frame(NULL)
+
+      count_df <- temp_count_df
+      }
+
+      # # iteratively rbind the results into a dataframe, starting at the second iteration
+      if(i > 1) {
+        count_df <- rbind(count_df,temp_count_df)
+      }
+      
+      
+      
+      # # extract out the Site.Name and 'n.total'
+      # data_count <- stats_5_min[4,]
+      # 
+      # # convert to df; clean up the col names
+      # data_count <- as.data.frame(data_count)
+      # 
+      # # colnames(data_count) <- c("Site.Name","Data.Count")
+      # colnames(data_count) <- c("Data.Count")
+      # 
+      # # print(data_count)
+      # 
+      # # assign 'stats_5_min' data count result to the dataframe, only on the first pass
+      # if(i == 1) {
+      #   
+      # # create empty dataframe to store the results
+      # count_df<-data.frame(NULL)
+      # 
+      # count_df <- data_count
+      # }
+      # 
+      # # iteratively rbind the results into a dataframe, starting at the second iteration
+      # if(i > 1) {
+      #   count_df <- rbind(count_df,data_count)
+      # }
+      
       
       # filter for the May to September rainfall
       rain_5_min <- rain_5_min %>% filter(Month >= 5 & Month <= 9)
@@ -329,21 +383,64 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
       rm(stats_df)
       
       
-  } # end of rain_stats_function_1
+  } # end of seq_along(csv_names)
 
 
   # >>>>>>>  FUNCTION CALL <<<<<<<<<<<<
   
    # the names of the full CSV files
-   csv_names<-list.files('data_out/MASTER_CSV_5_min')
-   
-   lapply(csv_names, function(x) rain_stats_function_1(x))
-   
-   rm(csv_names)
+   # csv_names<-list.files('data_out/MASTER_CSV_5_min')
+   # 
+   # lapply(csv_names, function(x) rain_stats_function_1(x))
+   # 
+   # rm(csv_names)
   
   # *************************************************************
 
    
+      # with 'count_df': save .csv file and plot bar chart of data count all sites
+     
+      # create a directory to save the compiled results
+      dir_3<-paste0('data_out',"/Stats_Summary_3")
+      
+      # create (if necessary) 'data_out/MASTER_CSV_Annual_Results' directory
+      if(dir.exists(dir_3) == FALSE) dir.create(dir_3)
+      
+      # create file path and name to save results
+      temp_name<-paste0(dir_3,"/total_count_5_min_raw_all_sites.csv")
+      
+      # write the above results to .CSV files
+      write.table(count_df,temp_name,sep=",",col.names=TRUE,row.names=FALSE)
+      
+  
+      # create bar chart of the 5 minute data count, all sites
+      
+      chart_title<-'Total 5-Minute Rainfall Data Count - by Site'
+      
+      # create chartPNG outifle name
+      outfile_name<-'total_5_minute_data_by_site.png'
+      
+      # specify directory name
+      PNG_folder_name<-dir_3
+      
+    p1<-ggplot(data=count_df, aes(x = Site.Name,y = Data.Count,fill=Site.Name)) +
+      geom_bar(stat = "identity",position=position_dodge()) +
+      theme(axis.title.x = element_text(size = 12),axis.text.x = element_text(angle=45,hjust=1)) +
+      theme(axis.title.y = element_text(size = 12)) +
+      ylab("Data Count") +
+      # scale_y_continuous(limits = c(0,500)) +
+      xlab("") +
+      guides(fill=FALSE) +
+      theme(plot.title = element_text(hjust = 0.5)) +
+      theme(plot.title = element_text(size = 14)) +
+      ggtitle(chart_title)
+    outfile<-file.path(PNG_folder_name,outfile_name)
+    ggsave(outfile,p1,width= 6, height=3.708, dpi=600,units=c("in"))
+    #print(p1)
+    rm(p1)
+    rm(chart_title,outfile_name,PNG_folder_name,outfile) #outfile variable is used again later
+
+
    
   # create table using kable
   
@@ -389,7 +486,6 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
 
 
 ```
-
 
 
 
