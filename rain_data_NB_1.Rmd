@@ -1,7 +1,17 @@
 ---
 title: "City of Calgary Rainfall Data Results"
+
+# following code is from stackoverflow
+# https://stackoverflow.com/questions/25849814/rstudio-rmarkdown-both-portrait-and-landscape-layout-in-a-single-pdf/41945462#41945462
+
+header-includes:
+- \usepackage{pdflscape}
+- \newcommand{\blandscape}{\begin{landscape}}
+- \newcommand{\elandscape}{\end{landscape}}
+
 output:
   pdf_document: default
+  classoption: landscape # does not seem to work (30-JAN-2021)
   html_notebook: default
   html_document:
     df_print: paged
@@ -29,6 +39,7 @@ library(hydroTSM)
 #library(plyr)
 
 panderOptions('knitr.auto.asis', FALSE)
+
 ```
 
 
@@ -156,8 +167,9 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
 
 ```
 
-```{r summary statistics, echo = FALSE,include = TRUE}
 
+\blandscape
+```{r summary statistics, echo = FALSE,include = TRUE,message=FALSE,warning=FALSE,results = 'asis'}
 
   # seq along the .CSV files; generate basic summary stastics
 
@@ -367,32 +379,7 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
       write.table(stats_5_min_compiled,temp_name,sep=",",col.names=TRUE,row.names=FALSE)
 
 
-      # create bar chart of the 5 minute data count, all sites
-      
-      chart_title<-'Total 5-Minute Rainfall Data Count - by Site'
-      
-      # create chartPNG outifle name
-      outfile_name<-'n_total_5_minute_data_by_site.png'
-      
-      # specify directory name
-      PNG_folder_name<-dir_3
-      
-    p1<-ggplot(data=stats_5_min_compiled, aes(x = Site.Name,y = n.total,fill=Site.Name)) +
-      geom_bar(stat = "identity",position=position_dodge()) +
-      theme(axis.title.x = element_text(size = 12),axis.text.x = element_text(angle=45,hjust=1)) +
-      theme(axis.title.y = element_text(size = 12)) +
-      ylab("Data Count") +
-      # scale_y_continuous(limits = c(0,500)) +
-      xlab("") +
-      guides(fill=FALSE) +
-      theme(plot.title = element_text(hjust = 0.5)) +
-      theme(plot.title = element_text(size = 14)) +
-      ggtitle(chart_title)
-    outfile<-file.path(PNG_folder_name,outfile_name)
-    ggsave(outfile,p1,width= 6, height=3.708, dpi=600,units=c("in"))
-    #print(p1)
-    rm(p1)
-    rm(chart_title,outfile_name,PNG_folder_name,outfile) #outfile variable is used again later
+     
 
 
    
@@ -405,40 +392,46 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
   stats_table<-read.table('data_out/Stats_Summary_3/stats_5_min_all_sites.csv',sep=",",header=TRUE,stringsAsFactors = FALSE)
 
 
-  stats_table %>% knitr::kable(caption = table_caption, digits = 2) %>% kableExtra::kable_styling(bootstrap_options = "striped")
+  # stats_table %>% knitr::kable(caption = table_caption, digits = 3) %>% kableExtra::kable_styling(bootstrap_options = "striped")
+  stats_table %>% knitr::kable(caption = table_caption, digits = 3) %>% kableExtra::kable_styling("striped")
+  
 
    
    
 ``` 
+\elandscape
 
+\blandscape
+```{r plot data count 5-min}
 
-```{r kable testing 1, eval = FALSE, results='asis'}
-
-
-  # create table using kable
-  
-  # create dummy table caption
-  table_caption<-paste0('SXX',': Statistics Summmary')
-
-  # read the saved .CSV file
-  stats_table<-read.table('data_out/Stats_Summary_1/S01_stats_summary_5_min.csv',sep=",",header=TRUE,stringsAsFactors = FALSE)
-
-  
-  stats_table %>% knitr::kable(caption = table_caption, digits = 2) %>% kableExtra::kable_styling(bootstrap_options = "striped")
-
-
+ # create bar chart of the 5 minute data count, all sites
+      
+      chart_title<-'Total 5-Minute Rainfall Data Count - by Site'
+      
+      # create chartPNG outifle name
+      outfile_name<-'n_total_5_minute_data_by_site.png'
+      
+      # specify directory name
+      PNG_folder_name<-dir_3
+      
+    p1<-ggplot(data=stats_5_min_compiled, aes(x = Site.Name,y = n.total,fill=Site.Name)) +
+        geom_bar(stat = "identity",position=position_dodge()) +
+        theme(axis.title.x = element_text(size = 12),axis.text.x = element_text(angle=45,hjust=1)) +
+        theme(axis.title.y = element_text(size = 12)) +
+        ylab("Data Count") +
+        # scale_y_continuous(limits = c(0,500)) +
+        xlab("") +
+        guides(fill=FALSE) +
+        theme(plot.title = element_text(hjust = 0.5)) +
+        theme(plot.title = element_text(size = 14)) +
+        ggtitle(chart_title)
+      outfile<-file.path(PNG_folder_name,outfile_name)
+      ggsave(outfile,p1,width= 6, height=3.708, dpi=600,units=c("in"))
+    print(p1)
+    rm(chart_title,outfile_name,PNG_folder_name,outfile) #outfile variable is used again later
 
 ```
-
-
-
-
-```{r extract events MIT_1}
-
-
-
-```
-
+\elandscape
 
 
   
