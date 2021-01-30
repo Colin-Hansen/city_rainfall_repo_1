@@ -92,8 +92,7 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
   rainfall_data<-read_tsv(infile,col_names = FALSE,trim_ws = TRUE,skip = 3)
   
   colnames(rainfall_data)<-c("Date","Hour.Minute.Seconds","Rainfall")
-  # print(str(rainfall_data))
- 
+  
   # create a column of Site.Name data
   Site.Name<-rep(name,nrow(rainfall_data))
  
@@ -157,7 +156,7 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
 
 ```
 
-```{r summary statistics, echo = FALSE}
+```{r summary statistics, echo = FALSE,include = TRUE}
 
 
   # seq along the .CSV files; generate basic summary stastics
@@ -169,16 +168,14 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
     
      for (i in seq_along(csv_names)) {
    
-      print(csv_names[i])
-    
-       # specify the CSV directory location and path to read the CSV file
+      # specify the CSV directory location and path to read the CSV file
       CSV_folder<-'data_out/MASTER_CSV_5_min'
       CSV_infile<-file.path(CSV_folder, csv_names[i])
       
       
       # create site name prefix
       site_prefix<-strtrim(csv_names[i],3)
-      print(site_prefix)
+      # print(site_prefix)
       
       # create directory to save statistics results - 5 minute data
       stats_folder_1<-'data_out/Stats_Summary_1'
@@ -214,6 +211,8 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
       
       # get basic stats on the 5 minute rainfall data
       
+      site.name <- rain_5_min$Site.Name[1]
+      
       mean <- mean(rain_5_min$Rainfall,na.rm = TRUE)
       
       sd <- sd(rain_5_min$Rainfall,na.rm = TRUE)
@@ -240,71 +239,38 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
       
       stats_5_min <- rbind(mean,sd,max,n.total,n.NA,pct.missing,n.non.zero,pct.non.zero,n.May.to.Sept,pct.May.to.Sept)
       
-        
-      # add a new field 'Site.Name'
+      stats_5_min_df <- data.frame("Site.Name"=site.name,
+                                    "mean"=mean,
+                                    "std.dev"=sd,
+                                    "max"=max,
+                                    "n.total"=n.total,
+                                    "n.NA"=n.NA,
+                                    "pct.missing"=pct.missing,
+                                    "n.non.zero"=n.non.zero,
+                                    "pct.non.zero"=pct.non.zero,
+                                    "n.May.to.Sept"=n.May.to.Sept,
+                                    "pct.May.to.Sept"=pct.May.to.Sept)  
       
-      Site.Name <- rep(site_prefix,nrow(stats_5_min))
-      
-      stats_5_min<-cbind(Site.Name,stats_5_min)
      
-      colnames(stats_5_min) <- c("Site.Name","Value")
+      # compile 'stats_5_min_df' results into single dataframe
       
-      # create a file name to save the 5 minute stats
-      CSV_file_name<-paste0(site_prefix,"_stats_summary_5_min.csv")
-      CSV_outfile<-file.path(stats_folder_1, CSV_file_name)
-        
-      # write the results to .CSV file; ** Note: col.names = NA to ensure the column name is written over the data, not the rownames
+      # note: the resulting dataframe is saved to .csv outside the current loop
       
-      write.table(stats_5_min,CSV_outfile,sep=",",col.names=NA,row.names=TRUE)
-     
-      # combine the Site.Name and the total data count
-      
-      temp_count_df <- data.frame("Site.Name" = site_prefix,"Data.Count" = n.total)
-      
-      print(temp_count_df)
-      
-      # # assign 'stats_5_min' data count result to the dataframe, only on the first pass
+      # assign result to the dataframe, only on the first pass
       if(i == 1) {
          
-      # # create empty dataframe to store the results
-      count_df<-data.frame(NULL)
+      # create empty dataframe to store the results
+      stats_5_min_compiled<-data.frame(NULL)
 
-      count_df <- temp_count_df
+      stats_5_min_compiled <- stats_5_min_df
       }
 
-      # # iteratively rbind the results into a dataframe, starting at the second iteration
+      # iteratively rbind the results into a dataframe, starting at the second iteration
       if(i > 1) {
-        count_df <- rbind(count_df,temp_count_df)
+        stats_5_min_compiled <- rbind(stats_5_min_compiled,stats_5_min_df)
       }
       
-      
-      
-      # # extract out the Site.Name and 'n.total'
-      # data_count <- stats_5_min[4,]
-      # 
-      # # convert to df; clean up the col names
-      # data_count <- as.data.frame(data_count)
-      # 
-      # # colnames(data_count) <- c("Site.Name","Data.Count")
-      # colnames(data_count) <- c("Data.Count")
-      # 
-      # # print(data_count)
-      # 
-      # # assign 'stats_5_min' data count result to the dataframe, only on the first pass
-      # if(i == 1) {
-      #   
-      # # create empty dataframe to store the results
-      # count_df<-data.frame(NULL)
-      # 
-      # count_df <- data_count
-      # }
-      # 
-      # # iteratively rbind the results into a dataframe, starting at the second iteration
-      # if(i > 1) {
-      #   count_df <- rbind(count_df,data_count)
-      # }
-      
-      
+     
       # filter for the May to September rainfall
       rain_5_min <- rain_5_min %>% filter(Month >= 5 & Month <= 9)
      
@@ -386,19 +352,7 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
   } # end of seq_along(csv_names)
 
 
-  # >>>>>>>  FUNCTION CALL <<<<<<<<<<<<
-  
-   # the names of the full CSV files
-   # csv_names<-list.files('data_out/MASTER_CSV_5_min')
-   # 
-   # lapply(csv_names, function(x) rain_stats_function_1(x))
-   # 
-   # rm(csv_names)
-  
-  # *************************************************************
-
-   
-      # with 'count_df': save .csv file and plot bar chart of data count all sites
+      # with 'stats_5_min_compiled': save .csv file and plot bar chart of data count all sites
      
       # create a directory to save the compiled results
       dir_3<-paste0('data_out',"/Stats_Summary_3")
@@ -407,23 +361,23 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
       if(dir.exists(dir_3) == FALSE) dir.create(dir_3)
       
       # create file path and name to save results
-      temp_name<-paste0(dir_3,"/total_count_5_min_raw_all_sites.csv")
+      temp_name<-paste0(dir_3,"/stats_5_min_all_sites.csv")
       
       # write the above results to .CSV files
-      write.table(count_df,temp_name,sep=",",col.names=TRUE,row.names=FALSE)
-      
-  
+      write.table(stats_5_min_compiled,temp_name,sep=",",col.names=TRUE,row.names=FALSE)
+
+
       # create bar chart of the 5 minute data count, all sites
       
       chart_title<-'Total 5-Minute Rainfall Data Count - by Site'
       
       # create chartPNG outifle name
-      outfile_name<-'total_5_minute_data_by_site.png'
+      outfile_name<-'n_total_5_minute_data_by_site.png'
       
       # specify directory name
       PNG_folder_name<-dir_3
       
-    p1<-ggplot(data=count_df, aes(x = Site.Name,y = Data.Count,fill=Site.Name)) +
+    p1<-ggplot(data=stats_5_min_compiled, aes(x = Site.Name,y = n.total,fill=Site.Name)) +
       geom_bar(stat = "identity",position=position_dodge()) +
       theme(axis.title.x = element_text(size = 12),axis.text.x = element_text(angle=45,hjust=1)) +
       theme(axis.title.y = element_text(size = 12)) +
@@ -445,16 +399,14 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
   # create table using kable
   
   # create dummy table caption
-  table_caption<-paste0('SXX',': Statistics Summmary')
+  table_caption<-'Statistics Summmary: 5 minute Data All Sites'
 
   # read the saved .CSV file
-  stats_table<-read.table('data_out/Stats_Summary_1/S01_stats_summary_5_min.csv',sep=",",header=TRUE,stringsAsFactors = FALSE)
+  stats_table<-read.table('data_out/Stats_Summary_3/stats_5_min_all_sites.csv',sep=",",header=TRUE,stringsAsFactors = FALSE)
 
-  
+
   stats_table %>% knitr::kable(caption = table_caption, digits = 2) %>% kableExtra::kable_styling(bootstrap_options = "striped")
 
-   
-   
    
    
 ``` 
