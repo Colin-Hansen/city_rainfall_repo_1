@@ -1,7 +1,7 @@
 ---
 title: "City of Calgary Rainfall Data Results"
 
-# following code is from stackoverflow
+# following code is from stackoverflow - to allow for landscape stype pdf output
 # https://stackoverflow.com/questions/25849814/rstudio-rmarkdown-both-portrait-and-landscape-layout-in-a-single-pdf/41945462#41945462
 
 header-includes:
@@ -169,7 +169,7 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
 
 
 \blandscape
-```{r summary statistics, echo = FALSE,include = TRUE,message=FALSE,warning=FALSE,results = 'asis'}
+```{r site-by-site statistics and charts, echo = FALSE,include = TRUE,message=FALSE,warning=FALSE,results = 'asis'}
 
   # seq along the .CSV files; generate basic summary stastics
 
@@ -195,11 +195,19 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
       # create (if necessary) directory - ** first part
       if(dir.exists(stats_folder_1) == FALSE) dir.create(stats_folder_1)
       
-      # create directory to save statistics results - hourly / daily / weekly / monthly / yearly data
+      # create directory to save statistics results
       stats_folder_2<-'data_out/Stats_Summary_2'
       
       # create (if necessary) directory - ** first part
       if(dir.exists(stats_folder_2) == FALSE) dir.create(stats_folder_2)
+      
+       # create directory to save statistics results
+      stats_folder_3<-'data_out/Stats_Summary_3'
+      
+      # create (if necessary) directory - ** first part
+      if(dir.exists(stats_folder_3) == FALSE) dir.create(stats_folder_3)
+      
+      
       
       
       # read the rainfall data for one site using 'read_csv'
@@ -284,26 +292,26 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
       
      
       # filter for the May to September rainfall
-      rain_5_min <- rain_5_min %>% filter(Month >= 5 & Month <= 9)
+      rain_5_min_may_sept <- rain_5_min %>% filter(Month >= 5 & Month <= 9)
      
       # get the hourly rainfall
       # Note: you have to add 'ungroup()' before the select command to extract only the hourly.rainfall *** 
      
-       rain_hourly <- rain_5_min %>% group_by(Year,Month,Day,Hour) %>% summarize(summary.rainfall=sum(Rainfall)) %>% ungroup() %>% select(summary.rainfall)
+       rain_hourly <- rain_5_min_may_sept %>% group_by(Year,Month,Day,Hour) %>% summarize(summary.rainfall=sum(Rainfall)) %>% ungroup() %>% select(summary.rainfall)
        
        # print(rain_hourly)
       
       # get the daily rainfall
-      rain_daily <- rain_5_min %>% group_by(Year,Month,Day) %>% summarize(summary.rainfall=sum(Rainfall)) %>% ungroup() %>% select(summary.rainfall)
+      rain_daily <- rain_5_min_may_sept %>% group_by(Year,Month,Day) %>% summarize(summary.rainfall=sum(Rainfall)) %>% ungroup() %>% select(summary.rainfall)
       
       # get the weekly rainfall
-      rain_weekly <- rain_5_min %>% group_by(Year,Month,Week) %>% summarize(summary.rainfall=sum(Rainfall)) %>% ungroup() %>% select(summary.rainfall)
+      rain_weekly <- rain_5_min_may_sept %>% group_by(Year,Month,Week) %>% summarize(summary.rainfall=sum(Rainfall)) %>% ungroup() %>% select(summary.rainfall)
       
        # get the monthly rainfall
-      rain_monthly <- rain_5_min %>% group_by(Year,Month) %>% summarize(summary.rainfall=sum(Rainfall)) %>% ungroup() %>% select(summary.rainfall)
+      rain_monthly <- rain_5_min_may_sept %>% group_by(Year,Month) %>% summarize(summary.rainfall=sum(Rainfall)) %>% ungroup() %>% select(summary.rainfall)
       
        # get the yearly rainfall
-      rain_yearly<- rain_5_min %>% group_by(Year) %>% summarize(summary.rainfall=sum(Rainfall)) %>% ungroup() %>% select(summary.rainfall)
+      rain_yearly<- rain_5_min_may_sept %>% group_by(Year) %>% summarize(summary.rainfall=sum(Rainfall)) %>% ungroup() %>% select(summary.rainfall)
       
       
       # create a list of the rain interval results
@@ -353,49 +361,114 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
       
        # create a file name to save the files for each site
       CSV_file_name<-paste0(site_prefix,"_stats_summary_hourly_to_yearly.csv")
-      CSV_outfile<-file.path(stats_folder_2, CSV_file_name)
+      CSV_outfile<-file.path(stats_folder_1, CSV_file_name)
         
        # write the results to .CSV file
        write.table(stats_df,CSV_outfile,sep=",",col.names=NA,row.names=TRUE)
        
-      rm(stats_df)
+     
       
-      
+  # create yearly rainfall bar chart - descending order
+  
+  # summarize to DAILY / MONTHLY / ANNUAL / MONTHLY AVERAGE data
+  # filter for the months May to September (05 - 09) 
+  daily_rainfall<- rain_5_min %>% group_by(Site.Name,Year,Month,Date) %>% filter(Month >= 5 & Month <= 9) %>% summarize(daily.rainfall=sum(Rainfall,na.rm=TRUE))
+  monthly_rainfall<- rain_5_min %>% group_by(Site.Name,Year,Month) %>% filter(Month >= 5 & Month <= 9) %>% summarize(monthly.rainfall=sum(Rainfall,na.rm=TRUE))
+  annual_rainfall<- rain_5_min %>% group_by(Site.Name,Year) %>% filter(Month >= 5 & Month <= 9) %>% summarize(annual.rainfall=sum(Rainfall,na.rm=TRUE))
+  monthly_rainfall<- as_tibble(monthly_rainfall)
+  monthly_average_rainfall<- monthly_rainfall %>% group_by(Site.Name,Month) %>% summarize(average.monthly.rainfall=mean(monthly.rainfall,na.rm=TRUE))
+     
+  # print(annual_rainfall)
+  
+  
+  # plot May - Sept 'annual' rainfall data - plot in descending order
+  
+  # create chart title (dynamic)
+  chart_title<-paste0("Rain Gauge"," ",site_prefix," ", "Total May-Sept. Rainfall - Descending")
+  
+  # create chart PNG outifle name (dynamic)
+  outfile_name<-paste0(site_prefix," - ", "May - Sept Rainfall - Desc.png")
+  
+   # specify directory name
+    PNG_folder_name<-stats_folder_3
+  
+  p1<-ggplot(data=annual_rainfall, aes(x = reorder(Year, -annual.rainfall),y=annual.rainfall,fill=Year)) +
+    geom_bar(stat = "identity",position=position_dodge()) +
+    theme(axis.title.x = element_text(size = 12),axis.text.x = element_text(angle=45,hjust=1)) +
+    theme(axis.title.y = element_text(size = 12)) +
+    ylab("Rainfall (mm)") +
+    scale_y_continuous(limits = c(0,500)) +
+    xlab("") +
+    guides(fill=FALSE) +
+    theme(plot.title = element_text(hjust = 0.5)) +
+    theme(plot.title = element_text(size = 14)) +
+    ggtitle(chart_title)
+  outfile<-file.path(PNG_folder_name,outfile_name)
+  ggsave(outfile,p1,width= 6, height=3.708, dpi=600,units=c("in"))
+  print(p1)
+  rm(chart_title,outfile_name,PNG_folder_name,outfile) #outfile variable is used again later
+  
+  
+   
   } # end of seq_along(csv_names)
 
 
-      # with 'stats_5_min_compiled': save .csv file and plot bar chart of data count all sites
+      # with 'stats_5_min_compiled': save .csv file
      
-      # create a directory to save the compiled results
-      dir_3<-paste0('data_out',"/Stats_Summary_3")
-      
-      # create (if necessary) 'data_out/MASTER_CSV_Annual_Results' directory
-      if(dir.exists(dir_3) == FALSE) dir.create(dir_3)
-      
       # create file path and name to save results
-      temp_name<-paste0(dir_3,"/stats_5_min_all_sites.csv")
+      temp_name<-paste0(stats_folder_2,"/stats_5_min_all_sites.csv")
       
       # write the above results to .CSV files
       write.table(stats_5_min_compiled,temp_name,sep=",",col.names=TRUE,row.names=FALSE)
 
 
-     
-
-
-   
   # create table using kable
   
   # create dummy table caption
   table_caption<-'Statistics Summmary: 5 minute Data All Sites'
 
   # read the saved .CSV file
-  stats_table<-read.table('data_out/Stats_Summary_3/stats_5_min_all_sites.csv',sep=",",header=TRUE,stringsAsFactors = FALSE)
+  stats_table<-read.table('data_out/Stats_Summary_2/stats_5_min_all_sites.csv',sep=",",header=TRUE,stringsAsFactors = FALSE)
 
 
   # stats_table %>% knitr::kable(caption = table_caption, digits = 3) %>% kableExtra::kable_styling(bootstrap_options = "striped")
   stats_table %>% knitr::kable(caption = table_caption, digits = 3) %>% kableExtra::kable_styling("striped")
   
 
+  
+  # create bar chart of the 5 minute data count, all sites
+      
+      chart_title<-'Total 5-Minute Rainfall Data Count - by Site'
+      
+      # create chartPNG outifle name
+      outfile_name<-'n_total_5_minute_data_by_site.png'
+      
+      # specify directory name
+      PNG_folder_name<-stats_folder_2
+      
+    p1<-ggplot(data=stats_5_min_compiled, aes(x = Site.Name,y = n.total,fill=Site.Name)) +
+        geom_bar(stat = "identity",position=position_dodge()) +
+        theme(axis.title.x = element_text(size = 12),axis.text.x = element_text(angle=45,hjust=1)) +
+        theme(axis.title.y = element_text(size = 12)) +
+        ylab("Data Count") +
+        # scale_y_continuous(limits = c(0,500)) +
+        xlab("") +
+        guides(fill=FALSE) +
+        theme(plot.title = element_text(hjust = 0.5)) +
+        theme(plot.title = element_text(size = 14)) +
+        ggtitle(chart_title)
+      outfile<-file.path(PNG_folder_name,outfile_name)
+      ggsave(outfile,p1,width= 6, height=3.708, dpi=600,units=c("in"))
+      print(p1)
+    rm(chart_title,outfile_name,PNG_folder_name,outfile) #outfile variable is used again later
+  
+  
+    
+    
+
+
+  
+  
    
    
 ``` 
@@ -412,7 +485,7 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
       outfile_name<-'n_total_5_minute_data_by_site.png'
       
       # specify directory name
-      PNG_folder_name<-dir_3
+      PNG_folder_name<-stats_folder_2
       
     p1<-ggplot(data=stats_5_min_compiled, aes(x = Site.Name,y = n.total,fill=Site.Name)) +
         geom_bar(stat = "identity",position=position_dodge()) +
@@ -434,5 +507,4 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
 \elandscape
 
 
-  
 
