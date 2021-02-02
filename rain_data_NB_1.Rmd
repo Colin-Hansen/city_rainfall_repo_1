@@ -313,59 +313,44 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
        # get the yearly rainfall
       rain_yearly<- rain_5_min_may_sept %>% group_by(Year) %>% summarize(summary.rainfall=sum(Rainfall)) %>% ungroup() %>% select(summary.rainfall)
       
+      # convert to dataframe before using map(smry)
       
+      rain_hourly <- as.data.frame(rain_hourly)
+      rain_daily <- as.data.frame(rain_daily)
+      rain_weekly <- as.data.frame(rain_weekly)
+      rain_monthly <- as.data.frame(rain_monthly)
+      rain_yearly <- as.data.frame(rain_yearly)
+     
       # create a list of the rain interval results
-      
-      # rain_list_1 <- list(rain_hourly_NZ,rain_daily_NZ,rain_weekly_NZ,rain_monthly_NZ,rain_yearly_NZ)
-      
+     
        rain_list_1 <- list(rain_hourly,rain_daily,rain_weekly,rain_monthly,rain_yearly)
        
-      # create empty dataframe to store the results
-      stats_df<-data.frame(NULL)
-
-      # enter loop along the rain list
+      # try using 'map' instead of seq_along 'rain_list_1'
       
-       for (k in seq_along(rain_list_1)) {
-         
-      # print(attributes(rain_list_1[[k]]))
-   
-      # use smry from 'hydroTSM' package
-     
-      # note - double square brackets to access individual element of the list
-      stats_summary_hydroTSM <- hydroTSM:::smry(rain_list_1[[k]]$summary.rainfall,na.rm = TRUE)
+      stats_df_list <- rain_list_1 %>% map(hydroTSM::smry)
+       
+      # use 'bind_cols' to combine the list of dataframes to one dataframe
       
-      # print(stats_summary_hydroTSM)
+      stats_df_bind_cols <- bind_cols(stats_df_list)
       
-       # assign stats result to the dataframe, only on the first pass
-      if(k == 1) {
-        stats_df <- stats_summary_hydroTSM
-      }
-      
-      # iteratively cbind the results into a dataframe, starting at the second iteration
-      if(k > 1) {
-        stats_df <- cbind(stats_df,stats_summary_hydroTSM)
-      }
-      
- 
-    } # end of seq_along 'rain_list_1'
-    
       # add column names
-      colnames(stats_df) <- c("Hourly","Daily","Weekly","Monthly","Yearly")
+      colnames(stats_df_bind_cols) <- c("Hourly","Daily","Weekly","Monthly","Yearly")
       
+      # add Site.Name to the dataframe - this maybe be optional - under review
       
-      # add Site.Name to dataframe
+      Site.Name <- rep(site_prefix,nrow(stats_df_bind_cols))
       
-      Site.Name <- rep(site_prefix,nrow(stats_df))
+      stats_df_bind_cols<- data.frame(Site.Name,stats_df_bind_cols)
       
-      stats_df<- data.frame(Site.Name,stats_df)
+      view(stats_df_bind_cols)
       
-       # create a file name to save the files for each site
+      # create a file name to save the files for each site
       CSV_file_name<-paste0(site_prefix,"_stats_summary_hourly_to_yearly.csv")
       CSV_outfile<-file.path(stats_folder_1, CSV_file_name)
         
        # write the results to .CSV file
-       write.table(stats_df,CSV_outfile,sep=",",col.names=NA,row.names=TRUE)
-       
+       write.table(stats_df_bind_cols,CSV_outfile,sep=",",col.names=NA,row.names=TRUE)
+      
      
       
   # create yearly rainfall bar chart - descending order
