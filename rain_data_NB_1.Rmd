@@ -1,5 +1,5 @@
 ---
-title: "City of Calgary Rainfall Data Results"
+title: "City of Calgary Rainfall Data Analysis"
 
 # following code is from stackoverflow - to allow for landscape stype pdf output
 # https://stackoverflow.com/questions/25849814/rstudio-rmarkdown-both-portrait-and-landscape-layout-in-a-single-pdf/41945462#41945462
@@ -169,7 +169,7 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
 
 
 \blandscape
-```{r site-by-site statistics and charts, echo = FALSE,include = TRUE,message=FALSE,warning=FALSE,results = 'asis'}
+```{r stats and charts - each site, echo = FALSE,include = TRUE, message=FALSE, warning=FALSE, results = 'asis'}
 
   # seq along the .CSV files; generate basic summary stastics
 
@@ -208,8 +208,6 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
       if(dir.exists(stats_folder_3) == FALSE) dir.create(stats_folder_3)
       
       
-      
-      
       # read the rainfall data for one site using 'read_csv'
       rain_5_min<-read_csv(CSV_infile,col_names = TRUE)
       
@@ -227,7 +225,6 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
       #                                            n.valid=sum(!is.na(Rainfall)),
       #                                            pct.valid=(n.valid/total.count)*100)
       # 
-      # print(stats_5_min)
       
       # get basic stats on the 5 minute rainfall data
       
@@ -257,7 +254,7 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
       
       # rbind the results
       
-      stats_5_min <- rbind(mean,sd,max,n.total,n.NA,pct.missing,n.non.zero,pct.non.zero,n.May.to.Sept,pct.May.to.Sept)
+      # stats_5_min <- rbind(mean,sd,max,n.total,n.NA,pct.missing,n.non.zero,pct.non.zero,n.May.to.Sept,pct.May.to.Sept)
       
       stats_5_min_df <- data.frame("Site.Name"=site.name,
                                     "mean"=mean,
@@ -290,7 +287,23 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
         stats_5_min_compiled <- rbind(stats_5_min_compiled,stats_5_min_df)
       }
       
+      
+      # create table #1 using kable
+  
+      # create table #1 caption
+      
+        table_caption<-paste0(site_prefix,' Statistics Summmary: 5 minute Data')
      
+        
+        # Note the use of the print command which is necessary when 'kable' is called within a loop
+        
+        # format the table with 'kable' and 'kableExtra'
+        table_1 <- stats_5_min_df %>% knitr::kable(caption = table_caption, digits = 3) %>% kableExtra::kable_styling(bootstrap_options = "striped")
+        
+        # print the result so it shows up in the PDF output
+        print(table_1)
+        
+      
       # filter for the May to September rainfall
       rain_5_min_may_sept <- rain_5_min %>% filter(Month >= 5 & Month <= 9)
      
@@ -313,19 +326,15 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
        # get the yearly rainfall
       rain_yearly<- rain_5_min_may_sept %>% group_by(Year) %>% summarize(summary.rainfall=sum(Rainfall)) %>% ungroup() %>% select(summary.rainfall)
       
-      # convert to dataframe before using map(smry)
-      
-      rain_hourly <- as.data.frame(rain_hourly)
-      rain_daily <- as.data.frame(rain_daily)
-      rain_weekly <- as.data.frame(rain_weekly)
-      rain_monthly <- as.data.frame(rain_monthly)
-      rain_yearly <- as.data.frame(rain_yearly)
-     
       # create a list of the rain interval results
      
-       rain_list_1 <- list(rain_hourly,rain_daily,rain_weekly,rain_monthly,rain_yearly)
+      rain_list_1 <- list(rain_hourly,rain_daily,rain_weekly,rain_monthly,rain_yearly)
+      
+      # use 'map' to convert the list of tibbles to a list of dataframes
        
-      # try using 'map' instead of seq_along 'rain_list_1'
+      rain_list_1 <- rain_list_1 %>% map(as.data.frame)
+      
+      # use 'map' instead of seq_along 'rain_list_1' to apply 'smry' to the list of dataframes
       
       stats_df_list <- rain_list_1 %>% map(hydroTSM::smry)
        
@@ -336,7 +345,7 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
       # add column names
       colnames(stats_df_bind_cols) <- c("Hourly","Daily","Weekly","Monthly","Yearly")
       
-      # add Site.Name to the dataframe - this maybe be optional - under review
+      # add Site.Name to the dataframe - this may be optional - under review
       
       Site.Name <- rep(site_prefix,nrow(stats_df_bind_cols))
       
@@ -368,6 +377,7 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
   
   # plot May - Sept 'annual' rainfall data - plot in descending order
   
+  
   # create chart title (dynamic)
   chart_title<-paste0("Rain Gauge"," ",site_prefix," ", "Total May-Sept. Rainfall - Descending")
   
@@ -393,8 +403,10 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
   print(p1)
   rm(chart_title,outfile_name,PNG_folder_name,outfile) #outfile variable is used again later
   
-  
+  # page break
    
+  # cat("\n\n\\pagebreak\n")
+  
   } # end of seq_along(csv_names)
 
 
@@ -407,20 +419,9 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
       write.table(stats_5_min_compiled,temp_name,sep=",",col.names=TRUE,row.names=FALSE)
 
 
-  # create table using kable
+ 
   
-  # create dummy table caption
-  table_caption<-'Statistics Summmary: 5 minute Data All Sites'
-
-  # read the saved .CSV file
-  stats_table<-read.table('data_out/Stats_Summary_2/stats_5_min_all_sites.csv',sep=",",header=TRUE,stringsAsFactors = FALSE)
-
-
-  # stats_table %>% knitr::kable(caption = table_caption, digits = 3) %>% kableExtra::kable_styling(bootstrap_options = "striped")
-  stats_table %>% knitr::kable(caption = table_caption, digits = 3) %>% kableExtra::kable_styling("striped")
-  
-
-  
+ 
   # create bar chart of the 5 minute data count, all sites
       
       chart_title<-'Total 5-Minute Rainfall Data Count - by Site'
@@ -447,20 +448,26 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
       print(p1)
     rm(chart_title,outfile_name,PNG_folder_name,outfile) #outfile variable is used again later
   
-  
-    
-    
-
-
-  
-  
-   
-   
 ``` 
 \elandscape
 
 \blandscape
-```{r plot data count 5-min}
+```{r stats and charts - all sites}
+
+
+ # create table #2 using kable
+  
+  # create dummy table caption
+  table_caption<-'Statistics Summmary: 5 minute Data All Sites'
+
+  # read the saved .CSV file
+  stats_table<-read.table('data_out/Stats_Summary_2/stats_5_min_all_sites.csv',sep=",",header=TRUE,stringsAsFactors = FALSE)
+
+
+  stats_table %>% knitr::kable(caption = table_caption, digits = 3) %>% kableExtra::kable_styling(bootstrap_options = "striped")
+
+
+
 
  # create bar chart of the 5 minute data count, all sites
       
@@ -490,6 +497,7 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
 
 ```
 \elandscape
+
 
 
 
