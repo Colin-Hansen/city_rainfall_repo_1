@@ -18,6 +18,10 @@ output:
   word_document: default
 ---
 
+Add Project Description here ...
+
+
+
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE)
 
@@ -43,9 +47,18 @@ panderOptions('knitr.auto.asis', FALSE)
 ```
 
 
+```{r plot cars}
+
+plot(cars)
+
+
+```
+
+
+
+
 
 ```{r compile raw data, eval = FALSE, include=FALSE}
-
 
 # create (if necessary) 'data_out' directory
 if(dir.exists('data_out') == FALSE) dir.create('data_out')
@@ -378,6 +391,7 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
   # plot May - Sept 'annual' rainfall data - plot in descending order
   
   
+  
   # create chart title (dynamic)
   chart_title<-paste0("Rain Gauge"," ",site_prefix," ", "Total May-Sept. Rainfall - Descending")
   
@@ -403,9 +417,16 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
   print(p1)
   rm(chart_title,outfile_name,PNG_folder_name,outfile) #outfile variable is used again later
   
+  
+  
   # page break
    
   # cat("\n\n\\pagebreak\n")
+  
+  cat('\\pagebreak') 
+  
+  
+  
   
   } # end of seq_along(csv_names)
 
@@ -419,7 +440,11 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
       write.table(stats_5_min_compiled,temp_name,sep=",",col.names=TRUE,row.names=FALSE)
 
 
- 
+      # create page break ** NOT WORKING **
+      
+      # cat("\n\n\\pagebreak\n") 
+      
+      cat("\\newpage")
   
  
   # create bar chart of the 5 minute data count, all sites
@@ -473,7 +498,7 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
       
       chart_title<-'Total 5-Minute Rainfall Data Count - by Site'
       
-      # create chartPNG outifle name
+      # create chart PNG outfile name
       outfile_name<-'n_total_5_minute_data_by_site.png'
       
       # specify directory name
