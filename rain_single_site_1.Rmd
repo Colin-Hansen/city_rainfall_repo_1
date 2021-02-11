@@ -24,7 +24,19 @@ output:
   word_document: default
 ---
 
-Add Project Description here ...
+##Project Description
+
+**Data Source:** 5 minute rainfall data from City of Calgary Water Resources Z:Drive
+
+**Raw Data Format:** YYYY/MM/DD	HH:MM	   0.0
+
+**Rain Gauge Equipment:** (to follow)
+
+**Number of Locations:** 46 sites
+
+**Earliest Year of Data:**
+
+**Latest Year of Data:** 
 
 
 
@@ -73,13 +85,15 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
   site_names<-as.character(site_names$Site.Name)
   
   # shorten to first two 2 site names - testing / optional
-  site_names <- site_names[1:2]
+  # site_names <- site_names[1:2]
+  site_names <- site_names[1]
+  
 
   # get the names of the raw data subfolders
   subfolder_names<-dir('data_in',full.names = TRUE)
  
-  # shorten to first two years of data - testing / optional
-  subfolder_names <- subfolder_names[1:2]
+  # shorten to first XX years of data - testing / optional
+  subfolder_names <- subfolder_names[1:10]
   
   
   ## ## ## Start of nested loop ## ## ##
@@ -620,39 +634,24 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
     join_City_and_YYC<-left_join(rain_yearly,rain_yearly_YYC,by="Year")
      
     view(join_City_and_YYC)
-    
-    
-    # create scatterplot of City versus YYC yearly rainfall data
    
+     # create scatterplot of City versus YYC yearly rainfall data
+    
+  ## Note: DO NOT MESS MUCH WITH THE FOLLOWING CODE FOR the p5 plot. It took a while to get it looking right. 
+    
       # create chart title (dynamic)
       chart_title<-paste0("Rain Gauge"," ",site_prefix," ", "versus YYC Intl. Yearly Rainfall")
-    
-      p5<-ggplot() +
-      geom_point(data = join_City_and_YYC,aes(x = Rainfall.mm.YYC,y = Rainfall.mm.City.gauge,colour="red")) +
-      geom_abline(intercept = 0,slope = 1,aes(linetype = "dashed")) +
-        theme(axis.title.x = element_text(size = 11),axis.text.x = element_text(hjust=1,size=11)) +
-        theme(axis.title.y = element_text(size = 11),axis.text.y = element_text(hjust=1,size=11)) +
-        # note: data outside 0 to 500 will not be plotted
+      
+      p6<-ggplot() +
+      geom_point(data = join_City_and_YYC, shape=19, size=3,colour="blue",aes(x = Rainfall.mm.YYC,y = Rainfall.mm.City.gauge)) + 
+        geom_abline(linetype = "dashed",size=1.5,intercept = 0,slope = 1) +
         scale_x_continuous(limits = c(0,500)) +
         scale_y_continuous(limits = c(0,500)) +
-        theme(legend.position="none")
-        theme(plot.margin = unit(c(1,1,1,1), "cm")) +
         theme(plot.title = element_text(hjust = 0.5)) +
         theme(plot.title = element_text(size = 12)) +
-        ggtitle(chart_title)
-      # outfile<-file.path(PNG_folder_name,outfile_name)
-      # ggsave(outfile,p5,width= 6, height=3.708, dpi=600,units=c("in"))
-      print(p5)
+      ggtitle(chart_title)
+      print(p6)
       
-      #try to create two plots and add them together
-      
-      
-      
-      
-      
-      
-
-
 
 ```
 \elandscape
