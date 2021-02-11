@@ -1,0 +1,658 @@
+---
+title: "City of Calgary Rainfall Data Analysis - Single Site Approach"
+
+author: "Colin Hansen, M.Eng., P. Eng."
+
+date: "XX-February-2021"
+
+
+
+# following code is from stackoverflow - to allow for landscape stype pdf output
+# https://stackoverflow.com/questions/25849814/rstudio-rmarkdown-both-portrait-and-landscape-layout-in-a-single-pdf/41945462#41945462
+
+header-includes:
+- \usepackage{pdflscape}
+- \newcommand{\blandscape}{\begin{landscape}}
+- \newcommand{\elandscape}{\end{landscape}}
+
+output:
+  pdf_document: default
+  classoption: landscape # does not seem to work (30-JAN-2021)
+  html_notebook: default
+  html_document:
+    df_print: paged
+  word_document: default
+---
+
+Add Project Description here ...
+
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+
+library(printr)
+library(reshape2)
+library(pander)
+
+
+# added 12-DEC-2020
+library(lubridate)
+library(scales)
+library(rio)
+library(knitr)
+library(tinytex)
+library(tidyverse)
+# note: tidyverse includes 'dplyr' package but not 'plyr'
+library(ggnewscale)
+library(kableExtra)
+library(hydroTSM)
+library(cowplot)
+#library(plyr)
+
+panderOptions('knitr.auto.asis', FALSE)
+
+```
+
+
+
+```{r compile-raw-data, eval = FALSE, include=FALSE}
+
+# remove the previous rainfall_data result
+
+rm(rainfall_data)
+
+# create (if necessary) 'data_out' directory
+if(dir.exists('data_out') == FALSE) dir.create('data_out')
+
+
+  # read the site names
+  site_names<-read.table('Site Names/Site_Names_and_Ground_Elevations.csv',sep=",",header=TRUE,stringsAsFactors = FALSE)
+ 
+  # extract a vector of the site names
+  site_names<-as.character(site_names$Site.Name)
+  
+  # shorten to first two 2 site names - testing / optional
+  site_names <- site_names[1:2]
+
+  # get the names of the raw data subfolders
+  subfolder_names<-dir('data_in',full.names = TRUE)
+ 
+  # shorten to first two years of data - testing / optional
+  subfolder_names <- subfolder_names[1:2]
+  
+  
+  ## ## ## Start of nested loop ## ## ##
+  
+  # enter loop along the site names (e.g. 'S01', 'S02', etc.)  
+  for (j in seq_along(site_names)) {
+  
+  # enter loop along the subfolder names (e.g. 1988, 1989, etc.)
+  for (i in seq_along(subfolder_names)) {
+  
+  name<-site_names[j]
+  
+  # strip the site names from the raw file names in each subfolder
+  
+  temp_names<-strtrim(dir(subfolder_names[i]),3)
+ 
+  # check to see if the 'name' passed to the function exists in the trimmed file names
+  if(name %in% temp_names)  {
+    
+ 
+  # the name of the matched file
+  file_match_char<-list.files(subfolder_names[i],pattern = name)
+  #print(file_match_char)
+  
+  # the full path pf the matched file
+  file_match_path<-file.path(subfolder_names[i],file_match_char)
+  #print(file_match_path)
+  
+   # reference the full path and the input file name using file.path
+  infile<-file_match_path
+  
+  # read raw rainfall data using 'read.table'
+  #rainfall_data<-read.table(infile,sep="\t",header=FALSE,skip=3,stringsAsFactors = FALSE)
+  
+  # read raw rainfall data using 'read_tsv'
+  rainfall_data<-read_tsv(infile,col_names = FALSE,trim_ws = TRUE,skip = 3)
+  
+  colnames(rainfall_data)<-c("Date","Hour.Minute.Seconds","Rainfall")
+  
+  # create a column of Site.Name data
+  Site.Name<-rep(name,nrow(rainfall_data))
+ 
+  # get the discrete date - time components
+  Year<-year(rainfall_data$Date)
+  Month<-month(rainfall_data$Date)
+  Week<-week(rainfall_data$Date)
+  Day<-mday(rainfall_data$Date)
+  Hour<-hour(rainfall_data$Hour.Minute.Seconds)
+  Minute<-minute(rainfall_data$Hour.Minute.Seconds)  
+  DOY<-yday(rainfall_data$Date)
+  Cumulative.Yearly.Rainfall<-cumsum(rainfall_data$Rainfall)
+  
+  # column bind the data and the date info
+  temp_df<-cbind(Site.Name,rainfall_data,Cumulative.Yearly.Rainfall,Year,Month,Week,Day,Hour,Minute,DOY)
+ 
+  # use mutate to add Date-Time from components
+  # Reminder: the time zone setting only affects the value when printing
+  temp_df <- temp_df %>% mutate(Date.Time=make_datetime(Year,Month,Day,Hour,Minute,tz = "America/Denver"))
+  
+  # create empty list, on first pass
+  if(i == 1) raw_data_list<-list(NULL)
+  
+  # build a list of the raw data for each site (see Hadley book, page 319)
+  raw_data_list[[i]] <- temp_df
+ 
+  }   
+    
+  else {
+    
+    print ("No filename match in that subfolder")
+  }  
+    
+    } # end of 'seq_along(subfolder_names)'
+    
+ 
+  # create a directory to save the .CSV files
+  CSV_master_folder_5_min<-paste0('data_out',"/MASTER_CSV_5_min")
+ 
+  # create (if necessary) 'data_out/MASTER_CSV_5_min' directory
+  if(dir.exists(CSV_master_folder_5_min) == FALSE) dir.create(CSV_master_folder_5_min)
+  
+  # create a file name to save the files for each site
+  CSV_file_name<-paste0(name,"_5_min.csv")
+  CSV_outfile<-file.path(CSV_master_folder_5_min, CSV_file_name)
+    
+  # convert the 'raw_data_list' list to a dataframe using ldply from 'plyr' package
+  raw_data_XX<-plyr::ldply(raw_data_list,rbind)
+  
+  # write the results to .CSV file
+  write_csv(raw_data_XX,CSV_outfile)   
+  
+  rm(raw_data_XX)  
+  
+     
+  } # end of 'seq_along(site_names)'
+  
+ 
+# *************************************************************
+
+
+```
+
+
+\blandscape
+```{r stats-part-1, echo = FALSE,include = TRUE, message=FALSE, warning=FALSE, results = 'asis',fig.width=14,fig.height=10}
+
+  # unused chunk option for figures
+
+    # out.width='.89\\linewidth'
+
+
+
+# keep the following line; but not sure if it works
+# cat("\\newpage")
+
+
+  # read a single .CSV file; generate basic summary stastics
+
+    # the name of the CSV file
+    csv_name<-list.files('data_out/MASTER_CSV_5_min')
+  
+      # specify the CSV directory location and path to read the CSV file
+      CSV_folder<-'data_out/MASTER_CSV_5_min'
+      CSV_infile<-file.path(CSV_folder, csv_name)
+      
+      # create site name prefix
+      site_prefix<-strtrim(csv_name,3)
+      # print(site_prefix)
+      
+      # create directory to save statistics results - 5 minute data
+      stats_folder_1<-'data_out/Stats_Summary_1'
+      
+      # create (if necessary) directory - ** first part
+      if(dir.exists(stats_folder_1) == FALSE) dir.create(stats_folder_1)
+      
+      # create directory to save statistics results
+      stats_folder_2<-'data_out/Stats_Summary_2'
+      
+      # create (if necessary) directory - ** first part
+      if(dir.exists(stats_folder_2) == FALSE) dir.create(stats_folder_2)
+      
+       # create directory to save statistics results
+      stats_folder_3<-'data_out/Stats_Summary_3'
+      
+      # create (if necessary) directory - ** first part
+      if(dir.exists(stats_folder_3) == FALSE) dir.create(stats_folder_3)
+      
+      
+      # read the rainfall data for one site using 'read_csv'
+      rain_5_min<-read_csv(CSV_infile,col_names = TRUE)
+      
+      # 5 minute rainfall statistics - ** not used but keep for now **
+      
+      # stats_5_min <- rain_5_min %>% summarize(mean=mean(Rainfall),
+      #                                            sd=sd(Rainfall),
+      #                                            min=min(Rainfall),
+      #                                            Q1=quantile(Rainfall,probs=0.25),
+      #                                            median=median(Rainfall),
+      #                                            Q3=quantile(Rainfall,probs=0.75),
+      #                                            max=max(Rainfall),
+      #                                            CV_pct=(sd/mean)*100,
+      #                                            total.count=n(),
+      #                                            n.valid=sum(!is.na(Rainfall)),
+      #                                            pct.valid=(n.valid/total.count)*100)
+      # 
+      
+      # get basic stats on the 5 minute rainfall data
+      
+      site.name <- rain_5_min$Site.Name[1]
+      
+      mean <- mean(rain_5_min$Rainfall,na.rm = TRUE)
+      
+      sd <- sd(rain_5_min$Rainfall,na.rm = TRUE)
+      
+      max <- max(rain_5_min$Rainfall,na.rm = TRUE)
+      
+      n.total <- nrow(rain_5_min)
+      
+      n.NA <- sum(is.na(rain_5_min$Rainfall))
+      
+      pct.missing <- (n.NA/n.total)*100
+      
+      n.non.zero <- nrow(subset(rain_5_min,Rainfall > 0))
+      
+      pct.non.zero <- (n.non.zero/n.total)*100
+      
+      n.May.to.Sept <- rain_5_min %>% filter(Month >= 5 & Month <= 9)
+      
+      n.May.to.Sept <- nrow(n.May.to.Sept)
+      
+      pct.May.to.Sept <- (n.May.to.Sept/n.total)*100
+      
+      # rbind the results
+      
+      # stats_5_min <- rbind(mean,sd,max,n.total,n.NA,pct.missing,n.non.zero,pct.non.zero,n.May.to.Sept,pct.May.to.Sept)
+      
+      stats_5_min_df <- data.frame("Site.Name"=site.name,
+                                    "mean"=mean,
+                                    "std.dev"=sd,
+                                    "max"=max,
+                                    "n.total"=n.total,
+                                    "n.NA"=n.NA,
+                                    "pct.missing"=pct.missing,
+                                    "n.non.zero"=n.non.zero,
+                                    "pct.non.zero"=pct.non.zero,
+                                    "n.May.to.Sept"=n.May.to.Sept,
+                                    "pct.May.to.Sept"=pct.May.to.Sept)  
+      
+     
+      # create table #1 using kable
+      table_caption<-paste0(site_prefix,' Rainfall Statistics: 5 minute Data')
+     
+        
+      # apply 'knitr::kable' and 'kableExtra' with bold format for the header
+      table_1 <- stats_5_min_df %>% knitr::kable(caption = table_caption, digits = 3) %>% kableExtra::row_spec(0,bold = TRUE) %>% kableExtra::kable_styling(latex_options = "scale_down")
+      
+      # print the result so it shows up in the PDF output
+      print(table_1)
+    
+        
+    
+      # filter for the May to September rainfall
+      rain_5_min_may_sept <- rain_5_min %>% filter(Month >= 5 & Month <= 9)
+     
+      # get the hourly rainfall
+      # Note: you have to add 'ungroup()' before the select command to extract only the hourly.rainfall *** 
+     
+       rain_hourly <- rain_5_min_may_sept %>% group_by(Year,Month,Day,Hour) %>% summarize(summary.rainfall=sum(Rainfall)) %>% ungroup() %>% select(summary.rainfall)
+      
+      # get the daily rainfall
+      rain_daily <- rain_5_min_may_sept %>% group_by(Year,Month,Day) %>% summarize(summary.rainfall=sum(Rainfall)) %>% ungroup() %>% select(summary.rainfall)
+      
+      # get the weekly rainfall
+      rain_weekly <- rain_5_min_may_sept %>% group_by(Year,Month,Week) %>% summarize(summary.rainfall=sum(Rainfall)) %>% ungroup() %>% select(summary.rainfall)
+      
+       # get the monthly rainfall
+      rain_monthly <- rain_5_min_may_sept %>% group_by(Year,Month) %>% summarize(summary.rainfall=sum(Rainfall)) %>% ungroup() %>% select(summary.rainfall)
+      
+       # get the yearly rainfall
+      rain_yearly<- rain_5_min_may_sept %>% group_by(Year) %>% summarize(summary.rainfall=sum(Rainfall)) %>% ungroup() %>% select(summary.rainfall)
+      
+      # create a list of the rain interval results
+     
+      rain_list_1 <- list(rain_hourly,rain_daily,rain_weekly,rain_monthly,rain_yearly)
+      
+      # use 'map' to convert the list of tibbles to a list of dataframes
+       
+      rain_list_1 <- rain_list_1 %>% map(as.data.frame)
+      
+      # use 'map' instead of seq_along 'rain_list_1' to apply 'smry' to the list of dataframes
+      
+      stats_df_list <- rain_list_1 %>% map(hydroTSM::smry)
+       
+      # use 'bind_cols' to combine the list of dataframes to one dataframe
+      
+      stats_df_bind_cols <- bind_cols(stats_df_list)
+      
+      # add column names
+      colnames(stats_df_bind_cols) <- c("Hourly","Daily","Weekly","Monthly","Yearly")
+      
+      # add Site.Name to the dataframe - this may be optional - under review
+      
+      Site.Name <- rep(site_prefix,nrow(stats_df_bind_cols))
+      
+      stats_df_bind_cols<- data.frame(Site.Name,stats_df_bind_cols)
+      
+      # view(stats_df_bind_cols)
+      
+      # create a file name to save the files for each site
+      CSV_file_name<-paste0(site_prefix,"_stats_summary_hourly_to_yearly.csv")
+      CSV_outfile<-file.path(stats_folder_1, CSV_file_name)
+        
+       # write the results to .CSV file
+       write.table(stats_df_bind_cols,CSV_outfile,sep=",",col.names=NA,row.names=TRUE)
+      
+     
+        # create table #2 using kable
+  
+      table_caption<-paste0(site_prefix,' Rainfall Statistics: Hourly to Yearly [Filter: May to September]')
+     
+      # Note the use of the print command; this forces the output to come before the chart
+      
+      # apply 'knitr::kable' and 'kableExtra' with header, row, and column specs
+      
+       table_2 <- stats_df_bind_cols %>% knitr::kable(caption = table_caption, digits = 3) %>% 
+         kableExtra::row_spec(0,bold = TRUE) %>% kableExtra::column_spec(1,width = "3cm") %>% 
+          kableExtra::column_spec(2:7,width = "2.2cm")
+      
+      # print the result so it shows up in the PDF output
+      print(table_2)
+      
+      # find the date-time of the maximum hourly / daily / weekly / monthly / yearly rainfall
+      
+      # get the hourly / daily / weekly / monthly / yearly rainfall
+      
+      rain_hourly <- rain_5_min_may_sept %>% group_by(Year,Month,Week,Day,Hour) %>% summarize(Rainfall.mm=sum(Rainfall))
+     
+      rain_daily <- rain_5_min_may_sept %>% group_by(Year,Month,Week,Day) %>% summarize(Rainfall.mm=sum(Rainfall))
+      
+      rain_weekly <- rain_5_min_may_sept %>% group_by(Year,Month,Week) %>% summarize(Rainfall.mm=sum(Rainfall))
+      
+      rain_monthly <- rain_5_min_may_sept %>% group_by(Year,Month) %>% summarize(Rainfall.mm=sum(Rainfall))
+      
+      rain_yearly <- rain_5_min_may_sept %>% group_by(Year) %>% summarize(Rainfall.mm=sum(Rainfall))
+      
+      # view(rain_yearly)
+      
+      # function: identify the maximum event
+      
+      identify_max <- function(x) {
+        max_event <- which(x$Rainfall.mm == max(x$Rainfall.mm))
+        return(x[max_event,])
+      }
+      
+      
+      # create a list of the rain interval results; ** ungrouped this time **
+     
+      rain_list_2 <- list(rain_hourly,rain_daily,rain_weekly,rain_monthly,rain_yearly)
+      
+      # use 'map' to convert the list of tibbles to a list of dataframes
+       
+      rain_list_2 <- rain_list_2 %>% map(as.data.frame)
+      
+      # use 'map' instead of seq_along 'rain_list_2' to apply 'identify_max' funcion to the list of dataframes
+      
+      max_event_df_list <- rain_list_2 %>% map(identify_max)
+       
+      # use 'bind_rows' to combine the list of dataframes to one dataframe
+      
+      max_events_df <- bind_rows(max_event_df_list)
+      
+      # add Site.Name to the dataframe - this may be optional - under review
+      
+      Site.Name <- rep(site_prefix,nrow(max_events_df))
+      
+      max_events_df<- data.frame(Site.Name,max_events_df)
+      
+      # add row names
+      
+      rownames(max_events_df) <- c("Hourly","Daily","Weekly","Monthly","Yearly")
+      
+      # view(max_events_df)
+      
+      
+      # create table #3 using kable
+      table_caption<-paste0(site_prefix,' Date-Time of Maximum Rainfall - Hourly to Yearly Duration')
+     
+      # apply 'knitr::kable' and 'kableExtra' with bold format for the header
+      
+      # table_3 <- max_events_df %>% knitr::kable(caption = table_caption, digits = 3) %>% kableExtra::row_spec(0,bold = TRUE) %>% kableExtra::kable_styling(latex_options = "scale_down")
+      
+      table_3 <- max_events_df %>% knitr::kable(caption = table_caption, digits = 3) %>% kableExtra::row_spec(0,bold = TRUE) 
+     
+      # print the result so it shows up in the PDF output
+      print(table_3)
+     
+  
+``` 
+\elandscape
+
+
+\blandscape
+\newpage
+
+```{r charts-part-1, echo = FALSE,include = TRUE, message=FALSE, warning=FALSE, results = 'asis',fig.width=9,fig.asp=0.618,fig.align='centre'}
+
+
+# fig.width=14,fig.height=10
+
+      # get the yearly 5-minute data count for the bar chart (ggplot)
+       yearly_data_count <- rain_5_min %>% group_by(Year) %>% summarize(n=n())
+       
+      # create bar chart of the 5 minute data count; one site
+      
+      # create chart title (dynamic)
+      chart_title<-paste0("Rain Gauge"," ",site_prefix," ", "Total 5-Minute Rainfall Data Count")
+     
+      # create chart PNG outile name (dynamic)
+      outfile_name<-paste0(site_prefix," - ", "n_total_5_minute_data_count.png")
+      
+      # specify directory name
+      PNG_folder_name<-stats_folder_3
+      
+    p1<-ggplot(data=yearly_data_count, aes(x = Year,y = n,fill=Year)) +
+        geom_bar(stat = "identity",position=position_dodge()) +
+        theme(axis.title.x = element_text(size = 12),axis.text.x = element_text(angle=45,hjust=1)) +
+        theme(axis.title.y = element_text(size = 12)) +
+        ylab("Data Count") +
+        # scale_y_continuous(limits = c(0,500)) +
+        xlab("") +
+        guides(fill=FALSE) +
+      
+        theme(plot.margin = unit(c(1,1,1,1), "cm")) +
+      
+        theme(plot.title = element_text(hjust = 0.5)) +
+        theme(plot.title = element_text(size = 12)) +
+        ggtitle(chart_title)
+      outfile<-file.path(PNG_folder_name,outfile_name)
+      ggsave(outfile,p1,width= 6, height=3.708, dpi=600,units=c("in"))
+      # print(p1)
+    rm(chart_title,outfile_name,PNG_folder_name,outfile) #outfile variable is used again later
+  
+   
+    # plot May - Sept 'annual' rainfall data - plot in descending order
+  
+  # create chart title (dynamic)
+  chart_title<-paste0("Rain Gauge"," ",site_prefix," ", "Total May-Sept. Rainfall - Descending")
+  
+  # create chart PNG outifle name (dynamic)
+  outfile_name<-paste0(site_prefix," - ", "May - Sept Rainfall - Desc.png")
+  
+   # specify directory name
+    PNG_folder_name<-stats_folder_3
+  
+  p2<-ggplot(data=rain_yearly, aes(x = reorder(Year, -Rainfall.mm),y=Rainfall.mm,fill=Year)) +
+    geom_bar(stat = "identity",position=position_dodge()) +
+    theme(axis.title.x = element_text(size = 12),axis.text.x = element_text(angle=45,hjust=1)) +
+    theme(axis.title.y = element_text(size = 12)) +
+    ylab("Rainfall (mm)") +
+    scale_y_continuous(limits = c(0,500)) +
+    xlab("") +
+    guides(fill=FALSE) +
+    
+    theme(plot.margin = unit(c(1,1,1,1), "cm")) +
+   
+    theme(plot.title = element_text(hjust = 0.5)) +
+    theme(plot.title = element_text(size = 12)) +
+    ggtitle(chart_title)
+  outfile<-file.path(PNG_folder_name,outfile_name)
+  # ggsave(outfile,p2,width= 6, height=3.708, dpi=600,units=c("in"))
+  # print(p2)
+  rm(chart_title,outfile_name,PNG_folder_name,outfile) #outfile variable is used again later
+  
+  
+  # use 'plot-grid' from cowplot package to to plot p1, p2 stacked one over the other
+  
+   plot_grid(p1,p2,nrow=2) %>% print()
+   
+
+```
+\elandscape
+
+\blandscape
+
+```{r charts-part-2, echo = FALSE,include = TRUE, message=FALSE, warning=FALSE, results = 'asis',fig.width=9,fig.asp=0.618,fig.align='centre'}
+
+
+    # create histogram of hourly rainfall data (cut off = 1 mm)
+      
+    # filter for hourly events greater than 1 mm
+
+    rain_hourly_GT_1 <- rain_hourly %>% filter(Rainfall.mm > 1)
+
+      # create chart title (dynamic)
+      chart_title<-paste0("Rain Gauge"," ",site_prefix," ", "Hourly Rainfall Frequency (> 1 mm)")
+    
+    p3<-ggplot(data=rain_hourly_GT_1, aes(x = Rainfall.mm)) +
+        geom_histogram(binwidth=0.5, colour="black", fill="3366FF") +
+        theme(axis.title.x = element_text(size = 12),axis.text.x = element_text(angle=45,hjust=1)) +
+        theme(axis.title.y = element_text(size = 12)) +
+        ylab("Count") +
+        # scale_y_continuous(limits = c(0,500)) +
+        xlab("Rainfall.mm") +
+        guides(fill=FALSE) +
+        theme(plot.margin = unit(c(1,1,1,1), "cm")) +
+        theme(plot.title = element_text(hjust = 0.5)) +
+        theme(plot.title = element_text(size = 12)) +
+        ggtitle(chart_title)
+      # outfile<-file.path(PNG_folder_name,outfile_name)
+      # ggsave(outfile,p3,width= 6, height=3.708, dpi=600,units=c("in"))
+      # print(p3)
+    
+    
+     # create histogram for daily rainfall events
+      
+    # filter for events greater than 5 mm
+
+    rain_daily_GT_2 <- rain_daily %>% filter(Rainfall.mm > 5)
+
+      # create chart title (dynamic)
+      chart_title<-paste0("Rain Gauge"," ",site_prefix," ", "Daily Rainfall Frequency (> 5 mm)")
+    
+       p4<-ggplot(data=rain_daily_GT_2, aes(x = Rainfall.mm)) +
+        geom_histogram(binwidth=0.5, colour="black", fill="99CC66") +
+        theme(axis.title.x = element_text(size = 12),axis.text.x = element_text(angle=45,hjust=1)) +
+        theme(axis.title.y = element_text(size = 12)) +
+        ylab("Count") +
+        xlab("Rainfall.mm") +
+        # guides(fill=FALSE) +
+        theme(plot.margin = unit(c(1,1,1,1), "cm")) +
+        theme(plot.title = element_text(hjust = 0.5)) +
+        theme(plot.title = element_text(size = 12)) +
+        ggtitle(chart_title)
+      # outfile<-file.path(PNG_folder_name,outfile_name)
+      # ggsave(outfile,p4,width= 6, height=3.708, dpi=600,units=c("in"))
+      # print(p4)
+    
+    
+     # use 'plot-grid' from cowplot package to to plot p3, p4
+  
+      plot_grid(p3,p4,nrow=2) %>% print()
+    
+    
+```
+\elandscape
+
+\blandscape
+
+
+```{r charts-part-3a,echo = FALSE,message=FALSE, warning=FALSE}
+
+    # purpose: scatterplot of the yearly (i.e. May to Sept.) City of Calgary rain gauge rainfall versus the YYC International Airport yearly rainfall 
+    
+    # the 'rain_yearly' tibble for the City site was originally created on line 385 of chunk 3
+    
+    # rename the 2nd column in the tibble ('Rainfall.mm') to generic names for easier plotting ''Rainfall.mmCity'
+
+    colnames(rain_yearly) <- c("Year","Rainfall.mm.City.gauge")
+
+    # import the YYC 'annual' rainfall data; the annual YYC rainfall data was compiled in my '3600_weathercan_YYC' project folder
+    
+    # the YYC 'annual' rainfall data is based on combining Environment Canada data from YYC_2205 and YYC_50430
+   
+    # specify the CSV directory location and path to read the CSV file
+    CSV_folder<-'./Calgary_Intl'
+    CSV_infile<-file.path(CSV_folder,'YYC_annual_NA_LTE10.csv')
+    
+    # read the compiled YYC data into a dataframe
+    rain_yearly_YYC<-read.table(CSV_infile,sep=",",header=TRUE,stringsAsFactors = FALSE)
+    
+    # rename the colnames in 'rain_yearly_YYC' to allow for easier join and scatterplot
+    colnames(rain_yearly_YYC) <- c("Year","Rainfall.mm.YYC","NA")
+    
+    # view(rain_yearly_YYC)
+    
+    # left join the City data with the YYC data, keeping the rows in the City data
+    
+    join_City_and_YYC<-left_join(rain_yearly,rain_yearly_YYC,by="Year")
+     
+    view(join_City_and_YYC)
+    
+    
+    # create scatterplot of City versus YYC yearly rainfall data
+   
+      # create chart title (dynamic)
+      chart_title<-paste0("Rain Gauge"," ",site_prefix," ", "versus YYC Intl. Yearly Rainfall")
+    
+      p5<-ggplot() +
+      geom_point(data = join_City_and_YYC,aes(x = Rainfall.mm.YYC,y = Rainfall.mm.City.gauge,colour="red")) +
+      geom_abline(intercept = 0,slope = 1,aes(linetype = "dashed")) +
+        theme(axis.title.x = element_text(size = 11),axis.text.x = element_text(hjust=1,size=11)) +
+        theme(axis.title.y = element_text(size = 11),axis.text.y = element_text(hjust=1,size=11)) +
+        # note: data outside 0 to 500 will not be plotted
+        scale_x_continuous(limits = c(0,500)) +
+        scale_y_continuous(limits = c(0,500)) +
+        theme(legend.position="none")
+        theme(plot.margin = unit(c(1,1,1,1), "cm")) +
+        theme(plot.title = element_text(hjust = 0.5)) +
+        theme(plot.title = element_text(size = 12)) +
+        ggtitle(chart_title)
+      # outfile<-file.path(PNG_folder_name,outfile_name)
+      # ggsave(outfile,p5,width= 6, height=3.708, dpi=600,units=c("in"))
+      print(p5)
+      
+      #try to create two plots and add them together
+      
+      
+      
+      
+      
+      
+
+
+
+```
+\elandscape
