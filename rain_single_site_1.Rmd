@@ -685,17 +685,26 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
     # convert to dataframe
     rain_5_min <- as.data.frame(rain_5_min)
    
-    print(head(rain_5_min))
+    # print(head(rain_5_min))
 
-
+    
       # specify the MIT values
-      MIT_value<-c(60)
+      MIT_value<-c(60,360)
     
     # enter loop with the MIT value; get RainEvents that correspond to the MIT_value
     
     for (i in seq_along(MIT_value)) {
       
-      print(MIT_value)
+     
+      
+      
+      print(MIT_value[i])
+      
+      # remove any previous results
+      
+      rm(Rain_Over_0,Rainindex)
+      
+      rm(RainEvents_list_1,RainEvents_list_2)
     
     
       ## >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
@@ -794,9 +803,7 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
       
       
       
-  }     # end of 'seq_along(MIT_value)'
-      
-      
+         
       ## detertime the gap time between rainfall events
       
       # create empty df
@@ -842,11 +849,11 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
       if(dir.exists(stats_folder_4) == FALSE) dir.create(stats_folder_4)      
       
       # create a file name to save the files for each site
-      CSV_file_name<-paste0(site_prefix,"_Gap_Times_All","_MIT_",MIT_value,".csv")
+      CSV_file_name<-paste0(site_prefix,"_Gap_Times_All","_MIT_",MIT_value[i],".csv")
       CSV_outfile<-file.path(stats_folder_4, CSV_file_name)
       
       # write the results to .CSV file
-      write.table(gap_times_df,CSV_outfile,sep=",",col.names=TRUE,row.names=FALSE)  
+      write.table(gap_times_df,CSV_outfile,sep=",",col.names=TRUE,row.names=FALSE)
       
       
       # summary statistics on the gap times
@@ -855,11 +862,11 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
       # print(smry_gap_times)
       
       # create a file name to save the file for each site
-      CSV_file_name<-paste0(site_prefix,"_Stats_Gap Times","_MIT_",MIT_value,".csv")
+      CSV_file_name<-paste0(site_prefix,"_Stats_Gap Times","_MIT_",MIT_value[i],".csv")
       CSV_outfile<-file.path(stats_folder_4, CSV_file_name)
       
       # write the results to .CSV file ** note use of 'col.names=NA' to get correct placement of column names
-      write.table(smry_gap_times,CSV_outfile,sep=",",col.names=NA,row.names=TRUE)  
+      # write.table(smry_gap_times,CSV_outfile,sep=",",col.names=NA,row.names=TRUE)
       
        
       
@@ -892,12 +899,12 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
       
       
       # create a file name to save the files for each site
-      CSV_file_name<-paste0(site_prefix,"_Rain_Events_All","_MIT_",MIT_value,".csv")
+      CSV_file_name<-paste0(site_prefix,"_Rain_Events_All","_MIT_",MIT_value[i],".csv")
       #CSV_outfile<-file.path(out_folder_events_full, CSV_file_name)
       CSV_outfile<-file.path(stats_folder_4, CSV_file_name)
       
       # write the results to .CSV file
-      write.table(RainEvents_df_long,CSV_outfile,sep=",",col.names=TRUE,row.names=FALSE)  
+      # write.table(RainEvents_df_long,CSV_outfile,sep=",",col.names=TRUE,row.names=FALSE)  
       
       
       # summary statistics - all rain events
@@ -907,7 +914,7 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
       last_line_df<- RainEvents_df_long %>% group_by(.id) %>% summarize(depth=last(cumulative.rainfall), duration.minutes=last(event.duration.minutes),duration.hours=last(event.duration.hours),rainrate.mm.hr=last(event.rainrate.mm.hr),max.intensity.mm.hr=max(intensity.mm.hr,na.rm=TRUE))
       
       # create a file name to save the file for each site
-      # CSV_file_name<-paste0(site_prefix,"_Duration_",duration_value[i],"_Rain_Events_Last_Line","_MIT_",MIT_value,".csv")
+      # CSV_file_name<-paste0(site_prefix,"_Duration_",duration_value[i],"_Rain_Events_Last_Line","_MIT_",MIT_value[i],".csv")
       # CSV_outfile<-file.path(out_folder_dynamic, CSV_file_name)
       
       # write the results to .CSV file ** OPTIONAL **
@@ -942,14 +949,14 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
       rownames(combined_summary)<-c("Number of Events","Min","1st Quartile","Median","Mean","3rd Quartile","Max")
       names(combined_summary)<-c("Depth (mm)","Duration (hours)","Final Rainrate (mm/hr)","Maximum Rainrate (mm/hr)")
       
+      # print(combined_summary)
+      
       # create a file name to save the file for each site
-      CSV_file_name<-paste0(site_prefix,"_Stats_Summary_All_Events","_MIT_",MIT_value,".csv")
+      CSV_file_name<-paste0(site_prefix,"_Stats_Summary_All_Events","_MIT_",MIT_value[i],".csv")
       CSV_outfile<-file.path(stats_folder_4, CSV_file_name)
       
       # write the results to .CSV file ** note use of 'col.names=NA' to get correct placement of column names
-      write.table(combined_summary,CSV_outfile,sep=",",col.names=NA,row.names=TRUE)  
-      
-      
+      # write.table(combined_summary,CSV_outfile,sep=",",col.names=NA,row.names=TRUE)  
       
       
       
@@ -971,7 +978,7 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
         
         
       # create a file name to save the files for each site
-      CSV_file_name<-paste0(site_prefix,"_Rain_Events_All","_MIT_",MIT_value,".csv")
+      CSV_file_name<-paste0(site_prefix,"_Rain_Events_All","_MIT_",MIT_value[i],".csv")
       #CSV_outfile<-file.path(out_folder_events_full, CSV_file_name)
       CSV_outfile<-file.path(out_folder_dynamic, CSV_file_name)
       
@@ -986,7 +993,7 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
       last_line_df<- RainEvents_df_long %>% group_by(.id) %>% summarize(depth=last(cumulative.rainfall), duration.minutes=last(event.duration.minutes),duration.hours=last(event.duration.hours),rainrate.mm.hr=last(event.rainrate.mm.hr),max.intensity.mm.hr=max(intensity.mm.hr,na.rm=TRUE))
       
       # create a file name to save the file for each site
-      # CSV_file_name<-paste0(site_prefix,"_Duration_",duration_value[i],"_Rain_Events_Last_Line","_MIT_",MIT_value,".csv")
+      # CSV_file_name<-paste0(site_prefix,"_Duration_",duration_value[i],"_Rain_Events_Last_Line","_MIT_",MIT_value[i],".csv")
       # CSV_outfile<-file.path(out_folder_dynamic, CSV_file_name)
       
       # write the results to .CSV file ** OPTIONAL **
@@ -1022,7 +1029,7 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
       names(combined_summary)<-c("Depth (mm)","Duration (hours)","Final Rainrate (mm/hr)","Maximum Rainrate (mm/hr)")
       
       # create a file name to save the file for each site
-      CSV_file_name<-paste0(site_prefix,"_Stats_Summary_All_Events","_MIT_",MIT_value,".csv")
+      CSV_file_name<-paste0(site_prefix,"_Stats_Summary_All_Events","_MIT_",MIT_value[i],".csv")
       CSV_outfile<-file.path(out_folder_dynamic, CSV_file_name)
       
       # write the results to .CSV file ** OPTIONAL **
@@ -1034,7 +1041,7 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
      
 
       # create a file name to save the duration-specific rain events for each site
-      CSV_file_name<-paste0(site_prefix,"_Rain_Events_Duration_",duration_value[i],"_MIT_",MIT_value,".csv")
+      CSV_file_name<-paste0(site_prefix,"_Rain_Events_Duration_",duration_value[i],"_MIT_",MIT_value[i],".csv")
       CSV_outfile<-file.path(out_folder_dynamic, CSV_file_name)
       
       # write the results to .CSV file
@@ -1076,7 +1083,7 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
       names(combined_summary)<-c("Depth (mm)","Duration (hours)","Final Rainrate (mm/hr)","Maximum Rainrate (mm/hr)")
       
       # create a file name to save the file for each site
-      CSV_file_name<-paste0(site_prefix,"_Stats_Summary_Duration_",duration_value[i],"_MIT_",MIT_value,".csv")
+      CSV_file_name<-paste0(site_prefix,"_Stats_Summary_Duration_",duration_value[i],"_MIT_",MIT_value[i],".csv")
       CSV_outfile<-file.path(out_folder_dynamic, CSV_file_name)
       
       # write the results to .CSV file ** OPTIONAL **
@@ -1099,7 +1106,7 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
       RainEvents_by_duration<- RainEvents_df_long %>% filter(.id %in% event_IDs_by_duration$.id)
       
       # create a file name to save the files for each site ** OPTIONAL **
-      CSV_file_name<-paste0(site_prefix,"_Duration_",duration_value[i],"_Events_Plus_Minus_","_MIT_",MIT_value,".csv")
+      CSV_file_name<-paste0(site_prefix,"_Duration_",duration_value[i],"_Events_Plus_Minus_","_MIT_",MIT_value[i],".csv")
       #CSV_outfile<-file.path(out_folder_events_full, CSV_file_name)
       CSV_outfile<-file.path(out_folder_dynamic, CSV_file_name)
       
@@ -1160,17 +1167,17 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
       
       
       # create a file name to save the file for each site ** OPTIONAL **
-      # CSV_file_name<-paste0(site_prefix,"_Duration_",duration_value[i],"_RainEvents_by_depth_with_Chicago","_MIT_",MIT_value,".csv")
+      # CSV_file_name<-paste0(site_prefix,"_Duration_",duration_value[i],"_RainEvents_by_depth_with_Chicago","_MIT_",MIT_value[i],".csv")
       # CSV_outfile<-file.path(out_folder_dynamic, CSV_file_name)
       
       # write the results to .CSV file ** OPTIONAL **
       # write.table(RE_top_5,CSV_outfile,sep=",",col.names=TRUE,row.names=FALSE)
       
       # create chart title (dynamic)
-      chart_title<-paste0(site_prefix," ",duration_value[i]," +/- 10%: Top 5 versus Chicago DS_","_MIT_",MIT_value)
+      chart_title<-paste0(site_prefix," ",duration_value[i]," +/- 10%: Top 5 versus Chicago DS_","_MIT_",MIT_value[i])
       
       # create chart PNG outfile (dynamic)
-      outfile_name<-paste0(site_prefix," ",duration_value[i],"_Minute Events Top 5 versus Chicago DS_","_MIT_",MIT_value,".png")
+      outfile_name<-paste0(site_prefix," ",duration_value[i],"_Minute Events Top 5 versus Chicago DS_","_MIT_",MIT_value[i],".png")
       
       
       # Note: in the following ggplot command, note that the event .id was converted to a factor to enable the legend
@@ -1216,10 +1223,10 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
       
     
       # create chart title (dynamic)
-      chart_title<-paste0(site_prefix," ",duration_value[i]," +/- 10%: All Events versus Chicago DS_","_MIT_",MIT_value)
+      chart_title<-paste0(site_prefix," ",duration_value[i]," +/- 10%: All Events versus Chicago DS_","_MIT_",MIT_value[i])
       
       # create chart PNG outfile (dynamic)
-      outfile_name<-paste0(site_prefix," ",duration_value[i],"_Minute Events versus Chicago DS_","_MIT_",MIT_value,".png")
+      outfile_name<-paste0(site_prefix," ",duration_value[i],"_Minute Events versus Chicago DS_","_MIT_",MIT_value[i],".png")
       
       
       # Note: in the following ggplot command, note that the event .id was converted to a factor to enable the legend
@@ -1254,7 +1261,15 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
     # }  ## End of 'seq_along duration_value' ##
     
  
-
+      
+      
+  }     # end of 'seq_along(MIT_value)'
+      
+    # remove any previous CSV filenames
+      
+    rm(CSV_file_name,CSV_outfile)
+      
+    
 
 
 ```
