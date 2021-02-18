@@ -507,8 +507,8 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
         theme(plot.title = element_text(hjust = 0.5)) +
         theme(plot.title = element_text(size = 12)) +
         ggtitle(chart_title)
-      outfile<-file.path(PNG_folder_name,outfile_name)
-      ggsave(outfile,p1,width= 6, height=3.708, dpi=600,units=c("in"))
+      # outfile<-file.path(PNG_folder_name,outfile_name)
+      # ggsave(outfile,p1,width= 6, height=3.708, dpi=600,units=c("in"))
       # print(p1)
     rm(chart_title,outfile_name,PNG_folder_name,outfile) #outfile variable is used again later
   
@@ -695,10 +695,7 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
     
     for (i in seq_along(MIT_value)) {
       
-     
-      
-      
-      print(MIT_value[i])
+      # print(MIT_value[i])
       
       # remove any previous results
       
@@ -723,8 +720,9 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
       #print(str(RainEvents_list_1))
       
      
-      ## Sequence along the RainEvents_list_1 list; identify the start and stop date.time for each rainfall event
-      # and the duration of each event
+      ## Sequence along the RainEvents_list_1 list; identify the start and stop date.time for each rainfall event; 
+      # then create 'RainEvents_list_2' based on the start and stop date.time in 'RainEvents_list_1 
+      #
       
       # create empty list
       
@@ -820,7 +818,11 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
           
           gap_end <- min(RainEvents_list_2[[m]]$Date.Time)
           
+          # use difftime to force the gap time to be in hours rather than days (or hours if less than a day)
+        
           gap_duration <- gap_end - gap_start
+          
+          gap_duration <- difftime(gap_end,gap_start, units="hours")
           
           gap_times_df <- rbind(gap_times_df,gap_duration)
           
@@ -833,27 +835,17 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
       # convert gap_times_df to dataframe
         
       gap_times_df <- as.data.frame(gap_times_df)
-      
-      # print(class(gap_times_df))
-      # 
-      # print(dim(gap_times_df))
-        
+     
       colnames(gap_times_df) <- c("Gap.Time.hours")
       
       # print(head(gap_times_df))
       
-      # create directory to save the results
-      stats_folder_4<-'data_out/Stats_Summary_4'
-      
-      # create (if necessary) directory - ** first part
-      if(dir.exists(stats_folder_4) == FALSE) dir.create(stats_folder_4)      
-      
       # create a file name to save the files for each site
-      CSV_file_name<-paste0(site_prefix,"_Gap_Times_All","_MIT_",MIT_value[i],".csv")
-      CSV_outfile<-file.path(stats_folder_4, CSV_file_name)
+      # CSV_file_name<-paste0(site_prefix,"_Gap_Times_All","_MIT_",MIT_value[i],".csv")
+      # CSV_outfile<-file.path(stats_folder_4, CSV_file_name)
       
-      # write the results to .CSV file
-      write.table(gap_times_df,CSV_outfile,sep=",",col.names=TRUE,row.names=FALSE)
+      # write the results to .CSV file - OPTIONAL
+      # write.table(gap_times_df,CSV_outfile,sep=",",col.names=TRUE,row.names=FALSE)
       
       
       # summary statistics on the gap times
@@ -862,11 +854,11 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
       # print(smry_gap_times)
       
       # create a file name to save the file for each site
-      CSV_file_name<-paste0(site_prefix,"_Stats_Gap Times","_MIT_",MIT_value[i],".csv")
-      CSV_outfile<-file.path(stats_folder_4, CSV_file_name)
+      CSV_file_name<-paste0(site_prefix,"_Statistics_Rainfall_Gap Times","_MIT_",MIT_value[i],".csv")
+      CSV_outfile<-file.path(stats_folder_2, CSV_file_name)
       
       # write the results to .CSV file ** note use of 'col.names=NA' to get correct placement of column names
-      # write.table(smry_gap_times,CSV_outfile,sep=",",col.names=NA,row.names=TRUE)
+      write.table(smry_gap_times,CSV_outfile,sep=",",col.names=NA,row.names=TRUE)
       
        
       
@@ -893,387 +885,133 @@ if(dir.exists('data_out') == FALSE) dir.create('data_out')
       Site.Name.id<-paste0(RainEvents_df_long$Site.Name,"-",RainEvents_df_long$.id)
       RainEvents_df_long<-cbind(Site.Name.id,RainEvents_df_long)
       
-      #print(head(RainEvents_df_long))
-      
-     
-      
-      
-      # create a file name to save the files for each site
-      CSV_file_name<-paste0(site_prefix,"_Rain_Events_All","_MIT_",MIT_value[i],".csv")
+      # create a file name to save the files for each site - OPTIONAL
+      # CSV_file_name<-paste0(site_prefix,"_Rain_Events_All","_MIT_",MIT_value[i],".csv")
       #CSV_outfile<-file.path(out_folder_events_full, CSV_file_name)
-      CSV_outfile<-file.path(stats_folder_4, CSV_file_name)
+      # CSV_outfile<-file.path(stats_folder_4, CSV_file_name)
       
       # write the results to .CSV file
       # write.table(RainEvents_df_long,CSV_outfile,sep=",",col.names=TRUE,row.names=FALSE)  
       
       
-      # summary statistics - all rain events
+       # SECTION: rainfall summary stats - NEW
       
       # summarize based on the last line of each event, which has the total cumulative.rainfall, duration, and rainfall intensity
       
-      last_line_df<- RainEvents_df_long %>% group_by(.id) %>% summarize(depth=last(cumulative.rainfall), duration.minutes=last(event.duration.minutes),duration.hours=last(event.duration.hours),rainrate.mm.hr=last(event.rainrate.mm.hr),max.intensity.mm.hr=max(intensity.mm.hr,na.rm=TRUE))
+      # last_line_df<- RainEvents_df_long %>% group_by(.id) %>% summarize(depth=last(cumulative.rainfall), duration.minutes=last(event.duration.minutes),duration.hours=last(event.duration.hours),rainrate.mm.hr=last(event.rainrate.mm.hr),max.intensity.mm.hr=max(intensity.mm.hr,na.rm=TRUE))
       
-      # create a file name to save the file for each site
-      # CSV_file_name<-paste0(site_prefix,"_Duration_",duration_value[i],"_Rain_Events_Last_Line","_MIT_",MIT_value[i],".csv")
-      # CSV_outfile<-file.path(out_folder_dynamic, CSV_file_name)
-      
-      # write the results to .CSV file ** OPTIONAL **
-      # write.table(last_line_df,CSV_outfile,sep=",",col.names=TRUE,row.names=FALSE)
-      
-      
-      # SECTION: rainfall summary stats
-      
-      # number of discrete rainfall events
-      num_rain_events<-nrow(last_line_df)
-      
-      # summary - rainfall depth
-      summary_depth<-summary(last_line_df$depth)
-      summary_1<-c(num_rain_events,summary_depth)
-      
-      # summary - rainfall duration (hours)
-      summary_hours<-summary(last_line_df$duration.hours)
-      summary_2<-c(num_rain_events,summary_hours)
-      
-      # summary - final rainfall rain rate (mm/hr)
-      summary_rainrate<-summary(last_line_df$rainrate.mm.hr)
-      summary_3<-c(num_rain_events,summary_rainrate)
-      
-      
-      # summary - maximum rainfall rain rate (mm/hr)
-      summary_max_rainrate<-summary(last_line_df$max.intensity.mm.hr)
-      summary_4<-c(num_rain_events,summary_max_rainrate)
-      
-      # combine summary statistics
-      combined_summary<-as.data.frame(cbind(summary_1,summary_2,summary_3,summary_4))
-      
-      rownames(combined_summary)<-c("Number of Events","Min","1st Quartile","Median","Mean","3rd Quartile","Max")
-      names(combined_summary)<-c("Depth (mm)","Duration (hours)","Final Rainrate (mm/hr)","Maximum Rainrate (mm/hr)")
-      
-      # print(combined_summary)
-      
-      # create a file name to save the file for each site
-      CSV_file_name<-paste0(site_prefix,"_Stats_Summary_All_Events","_MIT_",MIT_value[i],".csv")
-      CSV_outfile<-file.path(stats_folder_4, CSV_file_name)
-      
-      # write the results to .CSV file ** note use of 'col.names=NA' to get correct placement of column names
-      # write.table(combined_summary,CSV_outfile,sep=",",col.names=NA,row.names=TRUE)  
-      
-      
-      
+       depth<- RainEvents_df_long %>% group_by(.id) %>% summarize(depth=last(cumulative.rainfall)) %>% select(depth) %>% ungroup()
+       
+       duration_hours<- RainEvents_df_long %>% group_by(.id) %>% summarize(duration=last(event.duration.hours)) %>% select(duration) %>% ungroup()
+       
+       intensity<- RainEvents_df_long %>% group_by(.id) %>% summarize(intensity=last(event.rainrate.mm.hr)) %>% select(intensity) %>% ungroup()
+       
      
-      ## the code that follows is selectively executed, only if you want the stats and charts saved for each site
-      ## turning this off speeds up the city-wide processing
+      # create a list of the depth, duration, and intensity results
+     
+      ddi_list <- list(depth,duration_hours,intensity)
       
-      # create a flag value
-      site_by_site<-0
+      # use 'map' to convert the list of tibbles to a list of dataframes
+       
+      ddi_list <- ddi_list %>% map(as.data.frame)
       
-      if (site_by_site==1) {
-        
-        # create (dynamically) directories to save results for each rain gauge site
-        # create directory name and directory - ** first part **
-        out_folder_dynamic<-paste0(out_folder,"/",site_prefix,"_Results")
-        
-        # create (if necessary) directory
-        if(dir.exists(out_folder_dynamic) == FALSE) dir.create(out_folder_dynamic)
-        
-        
+      
+      # use 'map' instead of seq_along 'ddi_list' to apply 'smry' to the list of dataframes
+      
+      stats_df_list <- ddi_list %>% map(hydroTSM::smry)
+       
+      # use 'bind_cols' to combine the list of dataframes to one dataframe
+      
+      x <- bind_cols(stats_df_list)
+      
+      # add column names
+      colnames(x) <- c("Depth.mm","Duration.hours","Intensity.mm.hr")
+      
+      # add Site.Name to the dataframe - this may be optional - under review
+      
+      Site.Name <- rep(site_prefix,nrow(x))
+      
+      x<- data.frame(Site.Name,x)
+      
       # create a file name to save the files for each site
-      CSV_file_name<-paste0(site_prefix,"_Rain_Events_All","_MIT_",MIT_value[i],".csv")
-      #CSV_outfile<-file.path(out_folder_events_full, CSV_file_name)
-      CSV_outfile<-file.path(out_folder_dynamic, CSV_file_name)
+      CSV_file_name<-paste0(site_prefix,"_Statistics_Rainfall_Events","_MIT_",MIT_value[i],".csv")
+      CSV_outfile<-file.path(stats_folder_3, CSV_file_name)
+        
+       # write the results to .CSV file
+       write.table(x,CSV_outfile,sep=",",col.names=NA,row.names=TRUE)
       
-      # write the results to .CSV file
-      write.table(RainEvents_df_long,CSV_outfile,sep=",",col.names=TRUE,row.names=FALSE)  
-    
-   
-      # summary statistics - all rain events
-      
-      # summarize based on the last line of each event, which has the total cumulative.rainfall, duration, and rainfall intensity
-      
-      last_line_df<- RainEvents_df_long %>% group_by(.id) %>% summarize(depth=last(cumulative.rainfall), duration.minutes=last(event.duration.minutes),duration.hours=last(event.duration.hours),rainrate.mm.hr=last(event.rainrate.mm.hr),max.intensity.mm.hr=max(intensity.mm.hr,na.rm=TRUE))
-      
-      # create a file name to save the file for each site
-      # CSV_file_name<-paste0(site_prefix,"_Duration_",duration_value[i],"_Rain_Events_Last_Line","_MIT_",MIT_value[i],".csv")
-      # CSV_outfile<-file.path(out_folder_dynamic, CSV_file_name)
-      
-      # write the results to .CSV file ** OPTIONAL **
-      # write.table(last_line_df,CSV_outfile,sep=",",col.names=TRUE,row.names=FALSE)
-   
-      
-      # SECTION: rainfall summary stats
-      
-      # number of discrete rainfall events
-      num_rain_events<-nrow(last_line_df)
-      
-      # summary - rainfall depth
-      summary_depth<-summary(last_line_df$depth)
-      summary_1<-c(num_rain_events,summary_depth)
-      
-      # summary - rainfall duration (hours)
-      summary_hours<-summary(last_line_df$duration.hours)
-      summary_2<-c(num_rain_events,summary_hours)
-      
-      # summary - final rainfall rain rate (mm/hr)
-      summary_rainrate<-summary(last_line_df$rainrate.mm.hr)
-      summary_3<-c(num_rain_events,summary_rainrate)
-      
-      
-      # summary - maximum rainfall rain rate (mm/hr)
-      summary_max_rainrate<-summary(last_line_df$max.intensity.mm.hr)
-      summary_4<-c(num_rain_events,summary_max_rainrate)
-      
-      # combine summary statistics
-      combined_summary<-as.data.frame(cbind(summary_1,summary_2,summary_3,summary_4))
-      
-      rownames(combined_summary)<-c("Number of Events","Min","1st Quartile","Median","Mean","3rd Quartile","Max")
-      names(combined_summary)<-c("Depth (mm)","Duration (hours)","Final Rainrate (mm/hr)","Maximum Rainrate (mm/hr)")
-      
-      # create a file name to save the file for each site
-      CSV_file_name<-paste0(site_prefix,"_Stats_Summary_All_Events","_MIT_",MIT_value[i],".csv")
-      CSV_outfile<-file.path(out_folder_dynamic, CSV_file_name)
-      
-      # write the results to .CSV file ** OPTIONAL **
-      write.table(combined_summary,CSV_outfile,sep=",",col.names=TRUE,row.names=TRUE)  
-      
-      
-      
-      # SECTION: rainfall summary stats (specific durations)
      
-
-      # create a file name to save the duration-specific rain events for each site
-      CSV_file_name<-paste0(site_prefix,"_Rain_Events_Duration_",duration_value[i],"_MIT_",MIT_value[i],".csv")
-      CSV_outfile<-file.path(out_folder_dynamic, CSV_file_name)
-      
-      # write the results to .CSV file
-      write.table(RainEvents_TEMP,CSV_outfile,sep=",",col.names=TRUE,row.names=FALSE)
-      
-      
-      # summarize according to the last line of each event, which has the total cumulative.rainfall, duration, and rainfall intensity
-      
-      last_line_df<- RainEvents_by_duration %>% group_by(.id) %>% summarize(depth=last(cumulative.rainfall), duration.minutes=last(event.duration.minutes),duration.hours=last(event.duration.hours),rainrate.mm.hr=last(event.rainrate.mm.hr),max.intensity.mm.hr=max(intensity.mm.hr,na.rm=TRUE))
-        
-
-      
-      # SECTION: rainfall summary stats - specific durations
-      
-      # number of discrete rainfall events
-      num_rain_events<-nrow(last_line_df)
-      
-      # summary - rainfall depth
-      summary_depth<-summary(last_line_df$depth)
-      summary_1<-c(num_rain_events,summary_depth)
-      
-      # summary - rainfall duration (hours)
-      summary_hours<-summary(last_line_df$duration.hours)
-      summary_2<-c(num_rain_events,summary_hours)
-      
-      # summary - final rainfall rain rate (mm/hr)
-      summary_rainrate<-summary(last_line_df$rainrate.mm.hr)
-      summary_3<-c(num_rain_events,summary_rainrate)
-      
-      
-      # summary - maximum rainfall rain rate (mm/hr)
-      summary_max_rainrate<-summary(last_line_df$max.intensity.mm.hr)
-      summary_4<-c(num_rain_events,summary_max_rainrate)
-      
-      # combine summary statistics
-      combined_summary<-as.data.frame(cbind(summary_1,summary_2,summary_3,summary_4))
-      
-      rownames(combined_summary)<-c("Number of Events","Min","1st Quartile","Median","Mean","3rd Quartile","Max")
-      names(combined_summary)<-c("Depth (mm)","Duration (hours)","Final Rainrate (mm/hr)","Maximum Rainrate (mm/hr)")
-      
-      # create a file name to save the file for each site
-      CSV_file_name<-paste0(site_prefix,"_Stats_Summary_Duration_",duration_value[i],"_MIT_",MIT_value[i],".csv")
-      CSV_outfile<-file.path(out_folder_dynamic, CSV_file_name)
-      
-      # write the results to .CSV file ** OPTIONAL **
-      write.table(combined_summary,CSV_outfile,sep=",",col.names=TRUE,row.names=TRUE)
-      
-      
-      
-      
-      # SECTION: plot line charts
-      
-      # group by .id and summarize by the maximum event duration in minutes: filter for events matching plus or minus 10% of 'duration_value'
-      
-      shorter_duration<-0.9*duration_value[i]
-      longer_duration<-1.1*duration_value[i]
-      
-      event_IDs_by_duration<- RainEvents_df_long %>% group_by(.id) %>% summarize(max.event.duration=max(event.duration.minutes,na.rm=TRUE),na.rm=TRUE) %>% filter(max.event.duration >= shorter_duration & max.event.duration <= longer_duration)
-      
-      # select the rainfall events that match the duration of interest
-      
-      RainEvents_by_duration<- RainEvents_df_long %>% filter(.id %in% event_IDs_by_duration$.id)
-      
-      # create a file name to save the files for each site ** OPTIONAL **
-      CSV_file_name<-paste0(site_prefix,"_Duration_",duration_value[i],"_Events_Plus_Minus_","_MIT_",MIT_value[i],".csv")
-      #CSV_outfile<-file.path(out_folder_events_full, CSV_file_name)
-      CSV_outfile<-file.path(out_folder_dynamic, CSV_file_name)
-      
-      # write the results to .CSV file
-      # write.table(RainEvents_by_duration,CSV_outfile,sep=",",col.names=TRUE,row.names=FALSE)
-      
-      
-      # plot the cumsum rainfall; Top 5 largest events only AND the Chicago Design Storms
-      
-    
-      # select the columns from 'RainEvents_by_duration' to match the 'Chicago_list_df.csv' file  
-      RainEvents_by_duration_2<-  RainEvents_by_duration %>% select(.id,Date.Time,Rainfall,cumulative.rainfall,event.duration.minutes)
-      
-      #print(head(RainEvents_by_duration_2))
-      
-      # arrange the events by cumulative.rainfall and select the 5 largest events
-      
-      event_IDs_by_depth<- RainEvents_by_duration_2 %>% group_by(.id) %>% summarize(max.cumulative.rainfall=max(cumulative.rainfall,na.rm=TRUE)) %>% arrange(desc(max.cumulative.rainfall)) %>% slice(1:5)
-      
-    
-      # select the rainfall events that match the duration of interest
-      RE_top_5<- RainEvents_by_duration_2 %>% filter(.id %in% event_IDs_by_depth$.id)
-      
-      # add a column 'Event.Type'
-      Event.Type<-'Actual.Event'
-      
-      RE_top_5<-cbind("Event.Type"=Event.Type,RE_top_5)
-      
-      # print(str(RE_top_5))
-      # print(tail(RE_top_5))
-      
-      # create an .id for the 1:10 and 1:100 year Chicago storms of interest (dynamic based on duration value)
-      Chicago_id_10<-paste0("10yr_",duration_value[i],"min")
-      Chicago_id_100<-paste0("100yr_",duration_value[i],"min")
-      
-      # select the corresponding Chicago design storm data
-      Chicago_ds_10<- Chicago_df %>% filter(.id==Chicago_id_10)
-      Chicago_ds_100<- Chicago_df %>% filter(.id==Chicago_id_100)
-    
-      # add a column 'Event.Type' to the Chicago design storm data (* to faciliate ggplot plotting *)
-      
-      Chicago_ds_10<-cbind("Event.Type"='Chicago.10.Year',Chicago_ds_10)
-      Chicago_ds_100<-cbind("Event.Type"='Chicago.100.Year',Chicago_ds_100)
-      
-      # rbind the two design storms dataframes
-      Chicago_ds_10_100<-rbind(Chicago_ds_10,Chicago_ds_100)
-    
-      #print(Chicago_ds_10_100)
-      
-      # try merging the RainEvents_by_depth and the Chicago design storm
-      #RainEvents_by_depth$.id<-as.character(RainEvents_by_depth$.id)
-      
-      # rbind the design storm data into 'RE_top_5'
-      RE_top_5<-rbind(RE_top_5,Chicago_ds_10_100)
-      
-      # print(str(RE_top_5))
-      # print(tail(RE_top_5))
-      
-      
-      # create a file name to save the file for each site ** OPTIONAL **
-      # CSV_file_name<-paste0(site_prefix,"_Duration_",duration_value[i],"_RainEvents_by_depth_with_Chicago","_MIT_",MIT_value[i],".csv")
-      # CSV_outfile<-file.path(out_folder_dynamic, CSV_file_name)
-      
-      # write the results to .CSV file ** OPTIONAL **
-      # write.table(RE_top_5,CSV_outfile,sep=",",col.names=TRUE,row.names=FALSE)
-      
-      # create chart title (dynamic)
-      chart_title<-paste0(site_prefix," ",duration_value[i]," +/- 10%: Top 5 versus Chicago DS_","_MIT_",MIT_value[i])
-      
-      # create chart PNG outfile (dynamic)
-      outfile_name<-paste0(site_prefix," ",duration_value[i],"_Minute Events Top 5 versus Chicago DS_","_MIT_",MIT_value[i],".png")
-      
-      
-      # Note: in the following ggplot command, note that the event .id was converted to a factor to enable the legend
-      
-       p1<-ggplot(data=RE_top_5, aes(x=event.duration.minutes,y=cumulative.rainfall,color=Event.Type,group=.id)) +
-        geom_line(aes(linetype=Event.Type)) +
-        # manually specify the color for each Event.Type  
-        scale_color_manual(values=c(Actual.Event="red",Chicago.10.Year="green",Chicago.100.Year="blue")) +
-        
-        # set a black border  
-        theme_bw() +
-        theme(panel.border = element_rect(color="black", size=0.5, linetype="solid")) +
-        theme(axis.title.x = element_text(size = 10),axis.text.x = element_text(angle=45,hjust=1)) +
-        theme(axis.title.y = element_text(size = 10)) +
-        ylab("Cumulative Rainfall (mm)") +
-        xlab("Event Duration (min.)") +
-        theme(legend.title = element_blank()) +
-        theme(legend.text = element_text(size = 10)) +
-        theme(plot.title = element_text(hjust = 0.5)) +
-        theme(plot.title = element_text(size = 10)) +
-        ggtitle(chart_title)
-      outfile<-file.path(out_folder_dynamic,outfile_name)
-      ggsave(outfile,p1,width= 6, height=3.708, dpi=600,units=c("in"))
-      rm(p1)
-      rm(outfile,chart_title) #outfile variable is used again later
-      
-      
-      
-      
-      
-      
-      # plot the cumsum rainfall; All events, AND the Chicago Design Storms
-      
-      
-      # add a column 'Event.Type' to 'RainEvents_by_duration_2'
-      Event.Type<-'Actual.Event'
-      
-      RE_all<-cbind("Event.Type"=Event.Type,RainEvents_by_duration_2)
-      
-      
-      # rbind the design storm data into 'RE_all'
-      RE_all<-rbind(RE_all,Chicago_ds_10_100)
-      
-    
-      # create chart title (dynamic)
-      chart_title<-paste0(site_prefix," ",duration_value[i]," +/- 10%: All Events versus Chicago DS_","_MIT_",MIT_value[i])
-      
-      # create chart PNG outfile (dynamic)
-      outfile_name<-paste0(site_prefix," ",duration_value[i],"_Minute Events versus Chicago DS_","_MIT_",MIT_value[i],".png")
-      
-      
-      # Note: in the following ggplot command, note that the event .id was converted to a factor to enable the legend
-      
-      p1<-ggplot(data=RE_all, aes(x=event.duration.minutes,y=cumulative.rainfall,color=Event.Type,group=.id)) +
-        geom_line(aes(linetype=Event.Type)) +
-        # manually specify the color for each Event.Type  
-        scale_color_manual(values=c(Actual.Event="red",Chicago.10.Year="green",Chicago.100.Year="blue")) +
-        
-        # set a black border  
-        theme_bw() +
-        theme(panel.border = element_rect(color="black", size=0.5, linetype="solid")) +
-        
-        theme(axis.title.x = element_text(size = 10),axis.text.x = element_text(angle=45,hjust=1)) +
-        theme(axis.title.y = element_text(size = 10)) +
-        ylab("Cumulative Rainfall (mm)") +
-        xlab("Event Duration (min.)") +
-        theme(legend.title = element_blank()) +
-        theme(legend.text = element_text(size = 10)) +
-        theme(plot.title = element_text(hjust = 0.5)) +
-        theme(plot.title = element_text(size = 10)) +
-        ggtitle(chart_title)
-      outfile<-file.path(out_folder_dynamic,outfile_name)
-      ggsave(outfile,p1,width= 6, height=3.708, dpi=600,units=c("in"))
-      rm(p1)
-      rm(outfile,chart_title) #outfile variable is used again later
-      
-      
-      } # end of if(site_by_site ==1) section
-      
-      
-    # }  ## End of 'seq_along duration_value' ##
-    
- 
-      
-      
   }     # end of 'seq_along(MIT_value)'
       
     # remove any previous CSV filenames
       
-    rm(CSV_file_name,CSV_outfile)
-      
+    # rm(CSV_file_name,CSV_outfile)
+
     
-
-
 ```
 
+\blandscape
+
+```{r tables-part-2, echo = FALSE,include = TRUE, message=FALSE, warning=FALSE, results = 'asis',fig.width=14,fig.height=10}
 
 
+      dummy_data <- data.frame(cbind("col.one"=1:10,"col.two"=11:20))
 
+      # apply 'knitr::kable' and 'kableExtra' with bold format for the header
+      
+      dummy_table <- dummy_data %>% knitr::kable(caption = table_caption, digits = 3) %>% kableExtra::row_spec(0,bold = TRUE) 
+     
+      # print the result so it shows up in the PDF output
+      # print(dummy_table)  
+      
+      
+      
+      ## create tables of the summary statistics for Rainfall Events
+    
+    # read the first file
+    
+      # specify the CSV directory location and path to read the CSV file
+      CSV_folder<-'data_out/Stats_Summary_3'
+      
+      CSV_infile_1<-file.path(CSV_folder,"S01_Statistics_Rainfall_Events_MIT_60.csv")
+      
+      CSV_infile_2<-file.path(CSV_folder,"S01_Statistics_Rainfall_Events_MIT_360.csv")
+      
+      # read the data into a dataframe
+      table_4_data <- read.table(CSV_infile_1,sep=",",header=TRUE,stringsAsFactors = FALSE)
+      
+      # print(class(table_4_data))
+      
+      table_5_data <- read.table(CSV_infile_2,sep=",",header=TRUE,stringsAsFactors = FALSE)
+      
+    
+      # create table #4 using kable
+      
+      ## IMPORTANT NOTE: do not use underscore '_' symbol in the table caption; knitr fails if you do
+      
+      table_caption<-paste0(site_prefix,' Statistics Rainfall Events - MIT 60')
+      
+      # apply 'knitr::kable' and 'kableExtra' with bold format for the header
+      
+      table_4 <- table_4_data %>% knitr::kable(caption = table_caption, digits = 3) %>% kableExtra::row_spec(0,bold = TRUE)
+      
+      # print the result so it shows up in the PDF output
+      print(table_4)
+      
+      
+      # create table #5 using kable
+      
+      ## IMPORTANT NOTE: do not use underscore '_' symbol in the table caption; knitr fails if you do
+      
+      table_caption<-paste0(site_prefix,' Statistics Rainfall Events - MIT 360')
+      
+      # apply 'knitr::kable' and 'kableExtra' with bold format for the header
+      
+      table_5 <- table_5_data %>% knitr::kable(caption = table_caption, digits = 3) %>% kableExtra::row_spec(0,bold = TRUE)
+      
+      # print the result so it shows up in the PDF output
+      print(table_5)
+      
+
+```
+\elandscape
