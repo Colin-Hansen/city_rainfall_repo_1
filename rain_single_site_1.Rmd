@@ -26,20 +26,25 @@ output:
 
 ##Project Description
 
-Digital data files from the City of Calgary precipitation monitoring network are 
-available from 1988 to 2020. The data files contain 5-minute precipitation amounts,
+Historical rainfall data from the City of Calgary precipitation monitoring network are 
+available from 1988 to 2020. The rainfall data files contain 5-minute precipitation amounts,
 in units of mm, based on either tipping bucket or weighing type gauges. 
 
-The data exist as stand-alone .OUT (tab-separated) files, and there is normally 
-one file per site, per year. There is no user interface into the dataset, apart
-from the ability to download individual files from the City's Open Data Portal:
+The data files are saved as stand-alone .OUT (tab-separated) files, and there is normally 
+one file per site, per year. There is no user interface or master database currently
+available to query the historical rainfall data files. The data files are available 
+from the City's Open Data Portal:
 
 [link] (https://data.calgary.ca/Environment/Historical-Rainfall/d9kv-swk3)
 
 
-This project uses R software to read and compile the precipitation data. 
-Based on the compiled data for each site, various summary statistics and charts
-are created. The results can be exported to HTML, Word, or PDF type files. 
+This project uses R software to read the historical rainfall data files and
+compile the data into a single .csv file. Based on the compiled data for each site,
+various summary statistics and charts are created and the results are exported to
+PDF files (one summary file for each rain gauge site).
+
+The results include a comparison of the yearly rainfall at the City rain gauge versus
+the rainfall from the Environment Canada gauge at Calgary Intl. Airport. 
 
 
 ##Project Details
@@ -59,8 +64,8 @@ knitr::opts_chunk$set(echo = FALSE)
 # note to self; load 'plyr' before 'dplyr' / 'tidyverse'
 
 library(plyr)
-
 library(tidyverse)
+# note: tidyverse includes 'dplyr' package but not 'plyr'
 
 library(printr)
 library(reshape2)
@@ -71,7 +76,6 @@ library(scales)
 library(rio)
 library(knitr)
 library(tinytex)
-# note: tidyverse includes 'dplyr' package but not 'plyr'
 library(ggnewscale)
 library(kableExtra)
 library(hydroTSM)
@@ -256,20 +260,7 @@ panderOptions('knitr.auto.asis', FALSE)
       # read the rainfall data for one site using 'read_csv'
       rain_5_min<-read_csv(CSV_infile,col_names = TRUE)
       
-      # 5 minute rainfall statistics - ** not used but keep for now **
       
-      # stats_5_min <- rain_5_min %>% summarize(mean=mean(Rainfall),
-      #                                            sd=sd(Rainfall),
-      #                                            min=min(Rainfall),
-      #                                            Q1=quantile(Rainfall,probs=0.25),
-      #                                            median=median(Rainfall),
-      #                                            Q3=quantile(Rainfall,probs=0.75),
-      #                                            max=max(Rainfall),
-      #                                            CV_pct=(sd/mean)*100,
-      #                                            total.count=n(),
-      #                                            n.valid=sum(!is.na(Rainfall)),
-      #                                            pct.valid=(n.valid/total.count)*100)
-      # 
       
       # get basic stats on the 5 minute rainfall data
       
@@ -297,9 +288,7 @@ panderOptions('knitr.auto.asis', FALSE)
       
       pct.May.to.Sept <- (n.May.to.Sept/n.total)*100
       
-      # rbind the results
-      
-      # stats_5_min <- rbind(mean,sd,max,n.total,n.NA,pct.missing,n.non.zero,pct.non.zero,n.May.to.Sept,pct.May.to.Sept)
+      # create dataframe of the results
       
       stats_5_min_df <- data.frame("Site.Name"=site.name,
                                     "mean"=mean,
@@ -325,92 +314,16 @@ panderOptions('knitr.auto.asis', FALSE)
       print(table_1)
     
         
-    
+library(plyr)      
+      
+      
+      # detach 'dplyr' package; due to conflicts with 'tidyverse' package
+      detach("package:plyr")   
+      
+      
       # filter for the May to September rainfall
       rain_5_min_may_sept <- rain_5_min %>% filter(Month >= 5 & Month <= 9)
-     
-      # # get the hourly rainfall
-      # # Note: you have to add 'ungroup()' before the select command to extract only the hourly.rainfall *** 
-      # 
-      #  rain_hourly <- rain_5_min_may_sept %>% group_by(Year,Month,Day,Hour) %>% summarize(summary.rainfall=sum(Rainfall)) %>% ungroup() %>% select(summary.rainfall)
-      #  
-      #   rain_hourly_test <- rain_5_min_may_sept %>% group_by(Year,Month,Day,Hour) %>% summarize(hourly.sum.rainfall=sum(Rainfall))
-      #   
-      #   rain_monthly_test <- rain_5_min_may_sept %>% group_by(Year,Month) %>% summarize(monthly.rainfall=sum(Rainfall))
-      # 
-      # # get the daily rainfall
-      # rain_daily <- rain_5_min_may_sept %>% group_by(Year,Month,Day) %>% summarize(summary.rainfall=sum(Rainfall)) %>% ungroup() %>% select(summary.rainfall)
-      # 
-      # # get the weekly rainfall
-      # rain_weekly <- rain_5_min_may_sept %>% group_by(Year,Month,Week) %>% summarize(summary.rainfall=sum(Rainfall)) %>% ungroup() %>% select(summary.rainfall)
-      # 
-      #  # get the monthly rainfall
-      # rain_monthly <- rain_5_min_may_sept %>% group_by(Year,Month) %>% summarize(summary.rainfall=sum(Rainfall)) %>% ungroup() %>% select(summary.rainfall)
-      # 
-      #  # get the yearly rainfall
-      # # rain_yearly<- rain_5_min_may_sept %>% group_by(Year) %>% summarize(summary.rainfall=sum(Rainfall)) %>% ungroup() %>% select(summary.rainfall)
-      # 
-      #  rain_yearly<- rain_5_min_may_sept %>% group_by(Year) %>% summarize(yearly.rainfall=sum(Rainfall))
-      # 
-      # 
-      # 
-      # 
-      # # create a list of the rain interval results
-      # 
-      # rain_list_1 <- list(rain_hourly,rain_daily,rain_weekly,rain_monthly,rain_yearly)
-      # 
-      # # use 'map' to convert the list of tibbles to a list of dataframes
-      #  
-      # rain_list_1 <- rain_list_1 %>% map(as.data.frame)
-      # 
-      # # use 'map' instead of seq_along 'rain_list_1' to apply 'smry' to the list of dataframes
-      # 
-      # stats_df_list <- rain_list_1 %>% map(hydroTSM::smry)
-      #  
-      # # use 'bind_cols' to combine the list of dataframes to one dataframe
-      # 
-      # stats_df_bind_cols <- bind_cols(stats_df_list)
-      # 
-      # # add column names
-      # colnames(stats_df_bind_cols) <- c("Hourly","Daily","Weekly","Monthly","Yearly")
-      # 
-      # # add Site.Name to the dataframe - this may be optional - under review
-      # 
-      # Site.Name <- rep(site_prefix,nrow(stats_df_bind_cols))
-      # 
-      # stats_df_bind_cols<- data.frame(Site.Name,stats_df_bind_cols)
-      # 
-      # # view(stats_df_bind_cols)
-      # 
-      # # create a file name to save the files for each site
-      # CSV_file_name<-paste0(site_prefix,"_stats_summary_hourly_to_yearly.csv")
-      # CSV_outfile<-file.path(stats_folder_1, CSV_file_name)
-      #   
-      #  # write the results to .CSV file
-      #  write.table(stats_df_bind_cols,CSV_outfile,sep=",",col.names=NA,row.names=TRUE)
-      # 
-      # 
-      #   # create table #2 using kable
-      # 
-      # table_caption<-paste0(site_prefix,' Rainfall Statistics: Hourly to Yearly [Filter: May to September]')
-      # 
-      # # Note the use of the print command; this forces the output to come before the chart
-      # 
-      # # apply 'knitr::kable' and 'kableExtra' with header, row, and column specs
-      # 
-      #  table_2 <- stats_df_bind_cols %>% knitr::kable(caption = table_caption, digits = 3) %>% 
-      #    kableExtra::row_spec(0,bold = TRUE) %>% kableExtra::column_spec(1,width = "3cm") %>% 
-      #     kableExtra::column_spec(2:7,width = "2.2cm")
-      # 
-      # # print the result so it shows up in the PDF output
-      # print(table_2)
-      # 
-      # 
       
-      
-      
-      
-      # find the date-time of the maximum hourly / daily / weekly / monthly / yearly rainfall
       
       # get the hourly / daily / weekly / monthly / yearly rainfall
       
@@ -436,7 +349,96 @@ panderOptions('knitr.auto.asis', FALSE)
        
       # rain_monthly_agg <- aggregate(Rainfall~Year + Month,rain_5_min_may_sept,sum) %>% select(Rainfall)
        
-      # rain_yearly_agg <- aggregate(Rainfall~Year,rain_5_min_may_sept,sum) %>% select(Rainfall)
+      # rain_yearly_agg <- aggregate(Rainfall~Year,rain_5_min_may_sept,sum) %>% select(Rainfall)      
+      
+      
+     
+      # # get the hourly rainfall
+      # # Note: you have to add 'ungroup()' before the select command to extract only the hourly.rainfall *** 
+      # 
+      #  rain_hourly <- rain_5_min_may_sept %>% group_by(Year,Month,Day,Hour) %>% summarize(summary.rainfall=sum(Rainfall)) %>% ungroup() %>% select(summary.rainfall)
+      #  
+      #   rain_hourly_test <- rain_5_min_may_sept %>% group_by(Year,Month,Day,Hour) %>% summarize(hourly.sum.rainfall=sum(Rainfall))
+      #   
+      #   rain_monthly_test <- rain_5_min_may_sept %>% group_by(Year,Month) %>% summarize(monthly.rainfall=sum(Rainfall))
+      # 
+      # # get the daily rainfall
+      # rain_daily <- rain_5_min_may_sept %>% group_by(Year,Month,Day) %>% summarize(summary.rainfall=sum(Rainfall)) %>% ungroup() %>% select(summary.rainfall)
+      # 
+      # # get the weekly rainfall
+      # rain_weekly <- rain_5_min_may_sept %>% group_by(Year,Month,Week) %>% summarize(summary.rainfall=sum(Rainfall)) %>% ungroup() %>% select(summary.rainfall)
+      # 
+      #  # get the monthly rainfall
+      # rain_monthly <- rain_5_min_may_sept %>% group_by(Year,Month) %>% summarize(summary.rainfall=sum(Rainfall)) %>% ungroup() %>% select(summary.rainfall)
+      # 
+      #  # get the yearly rainfall
+      # # rain_yearly<- rain_5_min_may_sept %>% group_by(Year) %>% summarize(summary.rainfall=sum(Rainfall)) %>% ungroup() %>% select(summary.rainfall)
+      # 
+      #  rain_yearly<- rain_5_min_may_sept %>% group_by(Year) %>% summarize(yearly.rainfall=sum(Rainfall))
+      # 
+       
+      
+    
+      
+      # create a list of the rain interval results; just the 'Rainfall' from the summarize approach
+
+      # rain_list_1 <- list(rain_hourly,rain_daily,rain_weekly,rain_monthly,rain_yearly)
+
+      rain_list_1 <- list(rain_hourly$Rainfall.mm,rain_daily$Rainfall.mm,rain_weekly$Rainfall.mm,rain_monthly$Rainfall.mm,rain_yearly$Rainfall.mm)
+
+      
+      
+      
+      # use 'map' to convert the list of tibbles to a list of dataframes
+
+      rain_list_1 <- rain_list_1 %>% map(as.data.frame)
+
+      # use 'map' instead of seq_along 'rain_list_1' to apply 'smry' to the list of dataframes
+
+      stats_df_list <- rain_list_1 %>% map(hydroTSM::smry)
+
+      # use 'bind_cols' to combine the list of dataframes to one dataframe
+
+      stats_df_bind_cols <- bind_cols(stats_df_list)
+
+      # add column names
+      colnames(stats_df_bind_cols) <- c("Hourly","Daily","Weekly","Monthly","Yearly")
+
+      # add Site.Name to the dataframe - this may be optional - under review
+
+      # Site.Name <- rep(site_prefix,nrow(stats_df_bind_cols))
+      # 
+      # stats_df_bind_cols<- data.frame(Site.Name,stats_df_bind_cols)
+
+      # create a file name to save the files for each site
+      CSV_file_name<-paste0(site_prefix,"_stats_summary_hourly_to_yearly.csv")
+      CSV_outfile<-file.path(stats_folder_1, CSV_file_name)
+
+       # write the results to .CSV file
+       write.table(stats_df_bind_cols,CSV_outfile,sep=",",col.names=NA,row.names=TRUE)
+
+
+        # create table #2 using kable
+
+      table_caption<-paste0(site_prefix,' Rainfall Statistics: Hourly to Yearly [Filter: May to September]')
+
+      # Note the use of the print command; this forces the output to come before the chart
+
+      # apply 'knitr::kable' and 'kableExtra' with header, row, and column specs
+
+       table_2 <- stats_df_bind_cols %>% knitr::kable(caption = table_caption, digits = 3) %>%
+         kableExtra::row_spec(0,bold = TRUE) %>% kableExtra::column_spec(1,width = "3cm") %>%
+          kableExtra::column_spec(2:6,width = "2.2cm")
+
+      # print the result so it shows up in the PDF output
+      print(table_2)
+
+
+
+      
+      
+      
+      # find the date-time of the maximum hourly / daily / weekly / monthly / yearly rainfall
       
       # function: identify the maximum event
       
@@ -464,9 +466,9 @@ panderOptions('knitr.auto.asis', FALSE)
       
       # add Site.Name to the dataframe - this may be optional - under review
       
-      Site.Name <- rep(site_prefix,nrow(max_events_df))
-      
-      max_events_df<- data.frame(Site.Name,max_events_df)
+      # Site.Name <- rep(site_prefix,nrow(max_events_df))
+      # 
+      # max_events_df<- data.frame(Site.Name,max_events_df)
       
       # add row names
       
@@ -495,7 +497,7 @@ panderOptions('knitr.auto.asis', FALSE)
 \blandscape
 \newpage
 
-```{r charts-part-1, echo = FALSE,include = TRUE, message=FALSE, warning=FALSE, results = 'asis',fig.width=9,fig.asp=0.618,fig.align='centre'}
+```{r charts-part-1, eval= TRUE,echo = FALSE,include = TRUE, message=FALSE, warning=FALSE, results = 'asis',fig.width=9,fig.asp=0.618,fig.align='centre'}
 
 
 # fig.width=14,fig.height=10
@@ -506,7 +508,7 @@ panderOptions('knitr.auto.asis', FALSE)
       # create bar chart of the 5 minute data count; one site
       
       # create chart title (dynamic)
-      chart_title<-paste0("Rain Gauge"," ",site_prefix," ", "Total 5-Minute Rainfall Data Count")
+      chart_title<-paste0("Rain Gauge"," ",site_prefix," ", "5-Minute Rainfall Data Count - by Year")
      
       # create chart PNG outile name (dynamic)
       outfile_name<-paste0(site_prefix," - ", "n_total_5_minute_data_count.png")
@@ -539,7 +541,7 @@ panderOptions('knitr.auto.asis', FALSE)
     # plot May - Sept 'annual' rainfall data - plot in descending order
   
   # create chart title (dynamic)
-  chart_title<-paste0("Rain Gauge"," ",site_prefix," ", "Total May-Sept. Rainfall - Descending")
+  chart_title<-paste0("Rain Gauge"," ",site_prefix," ", "May-Sept. Rainfall by Year - Descending")
   
   # create chart PNG outifle name (dynamic)
   outfile_name<-paste0(site_prefix," - ", "May - Sept Rainfall - Desc.png")
@@ -577,7 +579,7 @@ panderOptions('knitr.auto.asis', FALSE)
 
 \blandscape
 
-```{r charts-part-2, echo = FALSE,include = TRUE, message=FALSE, warning=FALSE, results = 'asis',fig.width=9,fig.asp=0.618,fig.align='centre'}
+```{r charts-part-2, eval= TRUE,echo = FALSE,include = TRUE, message=FALSE, warning=FALSE, results = 'asis',fig.width=9,fig.asp=0.618,fig.align='centre'}
 
 
     # create histogram of hourly rainfall data (cut off = 1 mm)
@@ -642,7 +644,7 @@ panderOptions('knitr.auto.asis', FALSE)
 \blandscape
 
 
-```{r charts-part-3,echo = FALSE,message=FALSE, warning=FALSE}
+```{r charts-part-3,eval= TRUE,echo = FALSE,message=FALSE, warning=FALSE}
 
     # purpose: scatterplot of the yearly (i.e. May to Sept.) City of Calgary rain gauge rainfall versus the YYC International Airport yearly rainfall 
     
@@ -677,7 +679,7 @@ panderOptions('knitr.auto.asis', FALSE)
   ## Note: DO NOT MESS MUCH WITH THE FOLLOWING CODE FOR the p5 plot. It took a while to get it looking right. 
     
       # create chart title (dynamic)
-      chart_title<-paste0("Rain Gauge"," ",site_prefix," ", "May to Sept. Yearly Rainfall versus YYC Intl.")
+      chart_title<-paste0("Rain Gauge"," ",site_prefix," ", "Yearly Rainfall (May to Sept.) versus Calgary Intl. Airport")
       
       p6<-ggplot() +
       geom_point(data = join_City_and_YYC, shape=19, size=3,colour="blue",aes(x = Rainfall.mm.YYC,y = Rainfall.mm.City.gauge)) + 
@@ -693,7 +695,7 @@ panderOptions('knitr.auto.asis', FALSE)
 ```
 \elandscape
 
-```{r duration_analysis-part-1, eval=FALSE, echo = FALSE,message=FALSE, warning=FALSE}
+```{r duration_analysis-part-1, eval=TRUE, echo = FALSE,message=FALSE, warning=FALSE}
 
 # this code was copied from 'duration_analysis_1.R' file (project: 3900_CITY_WIDE_RAINFALL_MIT_PART_2)
 # the read function was removed becuase the 5-minute rainfall data was already read in a previous chunk
@@ -825,63 +827,8 @@ panderOptions('knitr.auto.asis', FALSE)
       
       
          
-      ## detertime the gap time between rainfall events
-      
-      # create empty df
-      
-      gap_times_df <- NULL
-      
-      # start 'seq_along(RainEvents_list_2)'
-      
-      for (m in seq_along(RainEvents_list_2)) {
-        
-        if (m > 1) {
-          
-          gap_start <- max(RainEvents_list_2[[m-1]]$Date.Time)
-          
-          gap_end <- min(RainEvents_list_2[[m]]$Date.Time)
-          
-          # use difftime to force the gap time to be in hours rather than days (or hours if less than a day)
-        
-          gap_duration <- gap_end - gap_start
-          
-          gap_duration <- difftime(gap_end,gap_start, units="hours")
-          
-          gap_times_df <- rbind(gap_times_df,gap_duration)
-          
-          
-        }
-        
-        
-      } # end of 'seq_along(RainEvents_list_2)'
-      
-      # convert gap_times_df to dataframe
-        
-      gap_times_df <- as.data.frame(gap_times_df)
-     
-      colnames(gap_times_df) <- c("Gap.Time.hours")
-      
-      # print(head(gap_times_df))
-      
-      # create a file name to save the files for each site
-      # CSV_file_name<-paste0(site_prefix,"_Gap_Times_All","_MIT_",MIT_value[i],".csv")
-      # CSV_outfile<-file.path(stats_folder_4, CSV_file_name)
-      
-      # write the results to .CSV file - OPTIONAL
-      # write.table(gap_times_df,CSV_outfile,sep=",",col.names=TRUE,row.names=FALSE)
       
       
-      # summary statistics on the gap times
-      smry_gap_times<- hydroTSM::smry(gap_times_df)
-      
-      # print(smry_gap_times)
-      
-      # create a file name to save the file for each site
-      CSV_file_name<-paste0(site_prefix,"_Statistics_Rainfall_Gap Times","_MIT_",MIT_value[i],".csv")
-      CSV_outfile<-file.path(stats_folder_2, CSV_file_name)
-      
-      # write the results to .CSV file ** note use of 'col.names=NA' to get correct placement of column names
-      write.table(smry_gap_times,CSV_outfile,sep=",",col.names=NA,row.names=TRUE)
       
        
       
@@ -952,9 +899,9 @@ panderOptions('knitr.auto.asis', FALSE)
       
       # add Site.Name to the dataframe - this may be optional - under review
       
-      Site.Name <- rep(site_prefix,nrow(x))
-      
-      x<- data.frame(Site.Name,x)
+      # Site.Name <- rep(site_prefix,nrow(x))
+      # 
+      # x<- data.frame(Site.Name,x)
       
       # create a file name to save the files for each site
       CSV_file_name<-paste0(site_prefix,"_Statistics_Rainfall_Events","_MIT_",MIT_value[i],".csv")
@@ -962,6 +909,96 @@ panderOptions('knitr.auto.asis', FALSE)
         
        # write the results to .CSV file
        write.table(x,CSV_outfile,sep=",",col.names=NA,row.names=TRUE)
+       
+       
+       
+       ## revised approach to getting the gap times, which must be done by year
+       
+       # try to split 'RainEvents_df_long' by Year, using the Year as a factor
+       
+      year_as_factor <- factor(RainEvents_df_long$Year)
+       
+      # view(levels(year_as_factor))
+      
+      # create a list of the rainfall events, split by year
+      
+      RainEvents_df_long_split <- split(RainEvents_df_long, year_as_factor)
+       
+      
+      ## determine the gap time between rainfall events
+      
+      # apply 'gap_times_function to the list 'RainEvents_df_long_split
+      
+      
+      gap_times_function <- function(x) {
+      
+          # create empty df
+          
+          gap_times_df <- NULL
+            
+             for (m in seq_along(x)) {
+            
+                if (m > 1) {
+                  
+                  gap_start <- max(x[[m-1]]$Date.Time)
+                  
+                  gap_end <- min(x[[m]]$Date.Time)
+                  
+                  # use difftime to force the gap time to be in hours rather than days (or hours if less than a day)
+                
+                  gap_duration <- gap_end - gap_start
+                  
+                  gap_duration <- difftime(gap_end,gap_start, units="hours")
+                  
+                  gap_times_df <- rbind(gap_times_df,gap_duration)
+                  
+                  } # end 'if'
+               
+            } # end for loop 
+        
+      } # end of 'gap_times_function'
+        
+     
+      
+      
+     # use 'map' to apply 'gap_times_function' to the list of dataframes
+
+      # gap_results <- RainEvents_df_long_split %>% map(gap_times_function)
+      
+      
+      # use 'bind_cols' to combine the list of dataframes to one dataframe
+
+      # gap_results_bind_cols <- bind_cols(gap_results)
+
+      # add column names
+      
+      # colnames(gap_results_bind_cols) <- c("Hourly","Daily","Weekly","Monthly","Yearly")
+      
+      
+      # convert gap_times_df to dataframe
+        
+      # gap_times_df <- as.data.frame(gap_times_df)
+      # 
+      # colnames(gap_times_df) <- c("Gap.Time.hours")
+      
+      # print(head(gap_times_df))
+      
+     
+      # summary statistics on the gap times
+      # smry_gap_times<- hydroTSM::smry(gap_times_df)
+      
+      # print(smry_gap_times)
+      
+      # create a file name to save the file for each site
+      CSV_file_name<-paste0(site_prefix,"_Statistics_Rainfall_Gap Times","_MIT_",MIT_value[i],".csv")
+      CSV_outfile<-file.path(stats_folder_2, CSV_file_name)
+      
+      # write the results to .CSV file ** note use of 'col.names=NA' to get correct placement of column names
+      # write.table(smry_gap_times,CSV_outfile,sep=",",col.names=NA,row.names=TRUE)      
+      
+      
+      
+      
       
      
   }     # end of 'seq_along(MIT_value)'
@@ -1039,12 +1076,12 @@ panderOptions('knitr.auto.asis', FALSE)
 ```
 \elandscape
 
-```{r testing-basic-stats, eval= TRUE, echo = FALSE,include = TRUE, message=FALSE, warning=FALSE, results = 'asis',fig.width=14,fig.height=10}
+```{r testing-basic-stats, eval= FALSE, echo = FALSE,include = TRUE, message=FALSE, warning=FALSE, results = 'asis',fig.width=14,fig.height=10}
 
 
 # https://stackoverflow.com/questions/21653295/dplyr-issues-when-using-group-bymultiple-variables
 
-detach(package:plyr)   
+#detach("package:plyr")
 
 
 # testing area (19-Feb-2021); summarize on Chunk 3 not working
