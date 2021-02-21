@@ -811,7 +811,7 @@ library(plyr)
         # cumulative time difference for each rainfall event
         event.duration.minutes<-cumsum(time.diff)    
         
-        # add the cumulative rainfall for each individial event to the list (dataframe) using cbind
+        # add the cumulative rainfall for each individual event to the list (dataframe) using cbind
         cbind(x,event.duration.minutes)
         
       }
@@ -823,11 +823,6 @@ library(plyr)
       # add the cumsum rainfall for each event in 'RainEvents_list_2'
       
       RainEvents_list_2<-lapply(RainEvents_list_2,function(x) rain_cumsum_3(x))
-      
-      
-      
-         
-      
       
       
        
@@ -870,11 +865,11 @@ library(plyr)
       
       # last_line_df<- RainEvents_df_long %>% group_by(.id) %>% summarize(depth=last(cumulative.rainfall), duration.minutes=last(event.duration.minutes),duration.hours=last(event.duration.hours),rainrate.mm.hr=last(event.rainrate.mm.hr),max.intensity.mm.hr=max(intensity.mm.hr,na.rm=TRUE))
       
-       depth<- RainEvents_df_long %>% group_by(.id) %>% summarize(depth=last(cumulative.rainfall)) %>% select(depth) %>% ungroup()
+       depth<- RainEvents_df_long %>% group_by(.id) %>% summarize(depth=last(cumulative.rainfall)) %>% select(depth) 
        
-       duration_hours<- RainEvents_df_long %>% group_by(.id) %>% summarize(duration=last(event.duration.hours)) %>% select(duration) %>% ungroup()
+       duration_hours<- RainEvents_df_long %>% group_by(.id) %>% summarize(duration=last(event.duration.hours)) %>% select(duration)
        
-       intensity<- RainEvents_df_long %>% group_by(.id) %>% summarize(intensity=last(event.rainrate.mm.hr)) %>% select(intensity) %>% ungroup()
+       intensity<- RainEvents_df_long %>% group_by(.id) %>% summarize(intensity=last(event.rainrate.mm.hr)) %>% select(intensity)
        
      
       # create a list of the depth, duration, and intensity results
@@ -912,7 +907,50 @@ library(plyr)
        
        
        
-       ## revised approach to getting the gap times, which must be done by year
+      
+      ## determine the gap time between rainfall events - ORIGINAL APPROACH 
+      
+      
+       # create empty df
+          
+          gap_times_df <- NULL
+            
+             for (m in seq_along(RainEvents_list_2)) {
+               
+                if (m > 1) {
+                  
+                  gap_start <- max(RainEvents_list_2[[m-1]]$Date.Time)
+                  
+                  gap_end <- min(RainEvents_list_2[[m]]$Date.Time)
+                  
+                  # use difftime to force the gap time to be in hours rather than days (or hours if less than a day)
+                
+                  gap_duration <- gap_end - gap_start
+                  
+                  gap_duration <- difftime(gap_end,gap_start, units="hours")
+                  
+                  gap_times_df <- rbind(gap_times_df,gap_duration)
+                  
+                  } # end 'if'
+               
+            } # end 'seq_along(RainEvents_list_2'
+      
+          
+      colnames(gap_times_df) <- c("Gap.Time.hours")
+
+      # summary statistics on the gap times
+      smry_gap_times<- hydroTSM::smry(gap_times_df)
+
+      # create a file name to save the file for each site
+      CSV_file_name<-paste0(site_prefix,"_Statistics_Rainfall_Gap Times","_MIT_",MIT_value[i],".csv")
+      CSV_outfile<-file.path(stats_folder_2, CSV_file_name)
+
+      # write the results to .CSV file ** note use of 'col.names=NA' to get correct placement of column names
+      write.table(smry_gap_times,CSV_outfile,sep=",",col.names=NA,row.names=TRUE)
+      
+      
+      
+         ## revised approach to getting the gap times, which must be done by year
        
        # try to split 'RainEvents_df_long' by Year, using the Year as a factor
        
@@ -923,26 +961,31 @@ library(plyr)
       # create a list of the rainfall events, split by year
       
       RainEvents_df_long_split <- split(RainEvents_df_long, year_as_factor)
-       
       
-      ## determine the gap time between rainfall events
       
-      # apply 'gap_times_function to the list 'RainEvents_df_long_split
+      
+      
+      
+      
+      # apply 'gap_times_function to the list 'RainEvents_df_long_split'
       
       
       gap_times_function <- function(x) {
-      
+        
           # create empty df
           
           gap_times_df <- NULL
             
              for (m in seq_along(x)) {
+               
+               # print(x$Date.Time[[m]])
+               
             
                 if (m > 1) {
                   
-                  gap_start <- max(x[[m-1]]$Date.Time)
+                  gap_start <- max(x$Date.Time[[m-1]])
                   
-                  gap_end <- min(x[[m]]$Date.Time)
+                  gap_end <- min(x$Date.Time[[m]])
                   
                   # use difftime to force the gap time to be in hours rather than days (or hours if less than a day)
                 
@@ -957,56 +1000,28 @@ library(plyr)
             } # end for loop 
         
       } # end of 'gap_times_function'
-        
      
       
+         
+      # TESTING ZONE
       
+     
      # use 'map' to apply 'gap_times_function' to the list of dataframes
 
-      # gap_results <- RainEvents_df_long_split %>% map(gap_times_function)
+      gap_results <- RainEvents_df_long_split %>% map(gap_times_function)
       
+      # the following line of code works fine
       
-      # use 'bind_cols' to combine the list of dataframes to one dataframe
-
-      # gap_results_bind_cols <- bind_cols(gap_results)
-
-      # add column names
+      test_gap_results <- RainEvents_df_long_split %>% map(summary)
       
-      # colnames(gap_results_bind_cols) <- c("Hourly","Daily","Weekly","Monthly","Yearly")
-      
-      
-      # convert gap_times_df to dataframe
-        
-      # gap_times_df <- as.data.frame(gap_times_df)
-      # 
-      # colnames(gap_times_df) <- c("Gap.Time.hours")
-      
-      # print(head(gap_times_df))
+      ## STOPPED HERE 20-FEB-2021; gap_results list is empty of results 
       
      
-      # summary statistics on the gap times
-      # smry_gap_times<- hydroTSM::smry(gap_times_df)
-      
-      # print(smry_gap_times)
-      
-      # create a file name to save the file for each site
-      CSV_file_name<-paste0(site_prefix,"_Statistics_Rainfall_Gap Times","_MIT_",MIT_value[i],".csv")
-      CSV_outfile<-file.path(stats_folder_2, CSV_file_name)
-      
-      # write the results to .CSV file ** note use of 'col.names=NA' to get correct placement of column names
-      # write.table(smry_gap_times,CSV_outfile,sep=",",col.names=NA,row.names=TRUE)      
-      
-      
-      
-      
       
      
   }     # end of 'seq_along(MIT_value)'
       
-    # remove any previous CSV filenames
-      
-    # rm(CSV_file_name,CSV_outfile)
-
+   
     
 ```
 
