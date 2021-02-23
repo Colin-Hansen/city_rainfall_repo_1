@@ -313,8 +313,12 @@ panderOptions('knitr.auto.asis', FALSE)
       # print the result so it shows up in the PDF output
       print(table_1)
     
-        
-library(plyr)      
+       
+      # explanation: 'plyr' has to be detached in order for 'dplyr' summarize to work properly. 
+      # ... but if I just run this chunk, 'plyr' does not even get loaded, hence added the extra 
+      # ... library commmand that follows
+      
+  library(plyr)      
       
       
       # detach 'dplyr' package; due to conflicts with 'tidyverse' package
@@ -697,6 +701,9 @@ library(plyr)
 
 ```{r duration_analysis-part-1, eval=TRUE, echo = FALSE,message=FALSE, warning=FALSE}
 
+library(plyr)
+
+
 # this code was copied from 'duration_analysis_1.R' file (project: 3900_CITY_WIDE_RAINFALL_MIT_PART_2)
 # the read function was removed becuase the 5-minute rainfall data was already read in a previous chunk
 
@@ -949,70 +956,107 @@ library(plyr)
       write.table(smry_gap_times,CSV_outfile,sep=",",col.names=NA,row.names=TRUE)
       
       
-      
-         ## revised approach to getting the gap times, which must be done by year
+     
        
-       # try to split 'RainEvents_df_long' by Year, using the Year as a factor
-       
-      year_as_factor <- factor(RainEvents_df_long$Year)
-       
-      # view(levels(year_as_factor))
-      
-      # create a list of the rainfall events, split by year
-      
-      RainEvents_df_long_split <- split(RainEvents_df_long, year_as_factor)
-      
-      
-      
-      
-      
-      
-      # apply 'gap_times_function to the list 'RainEvents_df_long_split'
-      
-      
-      gap_times_function <- function(x) {
-        
-          # create empty df
-          
-          gap_times_df <- NULL
-            
-             for (m in seq_along(x)) {
-               
-               # print(x$Date.Time[[m]])
-               
-            
-                if (m > 1) {
-                  
-                  gap_start <- max(x$Date.Time[[m-1]])
-                  
-                  gap_end <- min(x$Date.Time[[m]])
-                  
-                  # use difftime to force the gap time to be in hours rather than days (or hours if less than a day)
-                
-                  gap_duration <- gap_end - gap_start
-                  
-                  gap_duration <- difftime(gap_end,gap_start, units="hours")
-                  
-                  gap_times_df <- rbind(gap_times_df,gap_duration)
-                  
-                  } # end 'if'
-               
-            } # end for loop 
-        
-      } # end of 'gap_times_function'
      
       
-         
+      
+      
+      # 'gap_times_function'
+      
+      
+       # create empty df
+          
+          gap_times_function <- function(RainEvents_list_2) {
+            
+            # gap_times_df <- NULL
+              
+               for (m in seq_along(RainEvents_list_2)) {
+                 
+                  if (m > 1) {
+                    
+                    gap_start <- max(RainEvents_list_2[[m-1]]$Date.Time)
+                    
+                    gap_end <- min(RainEvents_list_2[[m]]$Date.Time)
+                    
+                    # use difftime to force the gap time to be in hours rather than days (or hours if less than a day)
+                  
+                    gap_duration <- gap_end - gap_start
+                    
+                    gap_duration <- difftime(gap_end,gap_start, units="hours")
+                    
+                    gap_times_df <- rbind(gap_times_df,gap_duration)
+                    
+                    } # end 'if'
+                 
+              } # end 'seq_along(RainEvents_list_2'
+          }
+      
+      
+          
+      # colnames(gap_times_df) <- c("Gap.Time.hours")  
+      
+    
+      
+      
+          
+          
+      # enter a loop to filter the rainfall events from the master dataframe - based on the Year - first try
+      
+        # create empty list
+      
+      RainEvents_list_2_by_year<-list(NULL)
+      
+      for (v in seq_along(year_as_factor)) {
+        
+        ## STOPPED HERE 22-FEB-2021
+        
+        print(v)
+        
+          # filter by the Year
+            
+          subsetted_events <- RainEvents_df_long %>% filter(Year==year_as_factor[v])
+          
+          print(head(subsetted_events))
+          
+          # create a list of the subsetted rainfall events
+          
+          RainEvents_list_2_by_year[v]<-list(subsetted_events)
+      
+      }
+      
+      
+      
+      
+      
+      
       # TESTING ZONE
+          
+           
+      ## revised approach to getting the gap times, which must be done by year
+       
+      year_as_factor <- factor(RainEvents_df_long$Year)
+      
+      # get the levels of 'year_as_factor'; convert to numeric
+      
+      year_as_factor <- as.numeric(levels(year_as_factor))
+      
+      
       
      
      # use 'map' to apply 'gap_times_function' to the list of dataframes
 
-      gap_results <- RainEvents_df_long_split %>% map(gap_times_function)
+      # gap_results <- RainEvents_df_long_split %>% map(gap_times_function)
+          
+      # gap_results <- TEST_RainEvents_split %>% map(gap_times_function)
       
+    
       # the following line of code works fine
       
-      test_gap_results <- RainEvents_df_long_split %>% map(summary)
+      # test_gap_results <- RainEvents_df_long_split %>% map(summary)
+      
+      
+      
       
       ## STOPPED HERE 20-FEB-2021; gap_results list is empty of results 
       
@@ -1090,73 +1134,3 @@ library(plyr)
 
 ```
 \elandscape
-
-```{r testing-basic-stats, eval= FALSE, echo = FALSE,include = TRUE, message=FALSE, warning=FALSE, results = 'asis',fig.width=14,fig.height=10}
-
-
-# https://stackoverflow.com/questions/21653295/dplyr-issues-when-using-group-bymultiple-variables
-
-#detach("package:plyr")
-
-
-# testing area (19-Feb-2021); summarize on Chunk 3 not working
-
- # read a single .CSV file; generate basic summary stastics
-
-    # the name of the CSV file
-    csv_name<-list.files('data_out/MASTER_CSV_5_min')
-  
-      # specify the CSV directory location and path to read the CSV file
-      CSV_folder<-'data_out/MASTER_CSV_5_min'
-      CSV_infile<-file.path(CSV_folder, csv_name)
-      
-      # create site name prefix
-      site_prefix<-strtrim(csv_name,3)
-      # print(site_prefix)
-      
-      # create directory to save statistics results - 5 minute data
-      stats_folder_1<-'data_out/Stats_Summary_1'
-      
-      # create (if necessary) directory - ** first part
-      if(dir.exists(stats_folder_1) == FALSE) dir.create(stats_folder_1)
-      
-      # create directory to save statistics results
-      stats_folder_2<-'data_out/Stats_Summary_2'
-      
-      # create (if necessary) directory - ** first part
-      if(dir.exists(stats_folder_2) == FALSE) dir.create(stats_folder_2)
-      
-       # create directory to save statistics results
-      stats_folder_3<-'data_out/Stats_Summary_3'
-      
-      # create (if necessary) directory - ** first part
-      if(dir.exists(stats_folder_3) == FALSE) dir.create(stats_folder_3)
-      
-      
-      # read the rainfall data for one site using 'read_csv'
-      rain_5_min<-read_csv(CSV_infile,col_names = TRUE)
-
-      print(class(rain_5_min))
-      
-      # filter for the May to September rainfall
-      rain_5_min_may_sept <- rain_5_min %>% filter(Month >= 5 & Month <= 9)
-      
-      
-      # find the date-time of the maximum hourly / daily / weekly / monthly / yearly rainfall
-      
-      # get the hourly / daily / weekly / monthly / yearly rainfall
-      
-      # rain_hourly <- rain_5_min_may_sept %>% group_by(Year,Month,Week,Day,Hour) %>% summarize(Rainfall.mm=sum(Rainfall))
-      
-      rain_hourly <- rain_5_min_may_sept %>% group_by(Year,Month,Week,Day,Hour)  %>% summarize(hourlyRainfall = sum(Rainfall))
-      
-      rain_yearly <- rain_5_min_may_sept %>% group_by(Year)  %>% summarize(yearlyRainfall = sum(Rainfall))
-      
-    
-      
-      
-
-```
-
-
-
